@@ -128,7 +128,7 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
 
-uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t custom_value);
+uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value);
 
 
 #endif /* ACCELEROMETER_SERVICE_H */

@@ -115,7 +115,7 @@
 
 #define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(1000)
 APP_TIMER_DEF(m_notification_timer_id);
-static uint8_t m_custom_value = 0;
+static uint8_t m_custom_value[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
 
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
@@ -175,7 +175,9 @@ static void notification_timeout_handler(void * p_context)
     ret_code_t err_code;
     
     // Increment the value of m_custom_value before nortifing it.
-    m_custom_value++;
+    m_custom_value[0]++;
+
+
     
     err_code = ble_accelerometer_custom_value_update(&m_accelerometer, m_custom_value);
     APP_ERROR_CHECK(err_code);
