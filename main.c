@@ -113,6 +113,10 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
+#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(1000)
+APP_TIMER_DEF(m_notification_timer_id);
+static uint8_t m_custom_value = 0;
+
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
@@ -120,6 +124,62 @@ BLE_ADVERTISING_DEF(m_advertising);                                             
 BLE_ACCELEROMETER_DEF(m_accelerometer);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
+
+
+/**@brief Function for handling the Custom Service Service events.
+ *
+ * @details This function will be called for all Custom Service events which are passed to
+ *          the application.
+ *
+ * @param[in]   p_cus_service  Custom Service structure.
+ * @param[in]   p_evt          Event received from the Custom Service.
+ *
+ */
+static void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service, ble_accelerometer_evt_t * p_evt)
+{
+    ret_code_t err_code;
+    switch(p_evt->evt_type)
+    {
+        case BLE_ACCELEROMETER_EVT_NOTIFICATION_ENABLED:
+            err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
+            APP_ERROR_CHECK(err_code);
+            break;
+
+        case BLE_ACCELEROMETER_EVT_NOTIFICATION_DISABLED:
+            err_code = app_timer_stop(m_notification_timer_id);
+           APP_ERROR_CHECK(err_code);
+            break;
+        case BLE_ACCELEROMETER_EVT_CONNECTED:
+            break;
+
+        case BLE_ACCELEROMETER_EVT_DISCONNECTED:
+              break;
+
+        default:
+              // No implementation needed.
+              break;
+    }
+}
+
+
+/**@brief Function for handling the Battery measurement timer timeout.
+ *
+ * @details This function will be called each time the battery level measurement timer expires.
+ *
+ * @param[in] p_context  Pointer used for passing some arbitrary information (context) from the
+ *                       app_start_timer() call to the timeout handler.
+ */
+static void notification_timeout_handler(void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    ret_code_t err_code;
+    
+    // Increment the value of m_custom_value before nortifing it.
+    m_custom_value++;
+    
+    err_code = ble_accelerometer_custom_value_update(&m_accelerometer, m_custom_value);
+    APP_ERROR_CHECK(err_code);
+}
 
 /* YOUR_JOB: Declare all services structure your application is using
  *  BLE_XYZ_DEF(m_xyz);
@@ -182,6 +242,10 @@ static void timers_init(void)
 {
     // Initialize timer module.
     ret_code_t err_code = app_timer_init();
+    APP_ERROR_CHECK(err_code);
+
+
+    err_code = app_timer_create(&m_notification_timer_id, APP_TIMER_MODE_REPEATED, notification_timeout_handler);
     APP_ERROR_CHECK(err_code);
 
     // Create timers.
@@ -292,13 +356,23 @@ static void services_init(void)
     APP_ERROR_CHECK(err_code);
 
     
-    ble_accerometer_service_init_t     accelerometer_service_init;
+    ble_accelerometer_service_init_t accelerometer_service_init;
 
      // Initialize CUS Service init structure to zero.
     memset(&accelerometer_service_init, 0, sizeof(accelerometer_service_init));
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_value_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_value_char_attr_md.write_perm);
+
+    // Set the cus event handler
+    accelerometer_service_init.evt_handler = on_accelerometer_evt;
 	
     err_code = ble_acceleration_service_init(&m_accelerometer, &accelerometer_service_init);
-    APP_ERROR_CHECK(err_code);	
+    APP_ERROR_CHECK(err_code);
+    //*/
+    
+
+	
     //*/
 
     /* YOUR_JOB: Add code to initialize the services used by the application.
@@ -712,6 +786,8 @@ static void advertising_start(bool erase_bonds)
         APP_ERROR_CHECK(err_code);
     }
 }
+
+
 
 
 /**@brief Function for application main entry.
