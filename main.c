@@ -81,8 +81,11 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_delay.h"
 
 #include "Services/AccelerometerService.h"
+#include "ADXL355/adxl355.h"
+#include "nrf_drv_twi.h"
 
 
 #define DEVICE_NAME                     "Nordic_Template"                       /**< Name of device. Will be included in the advertising data. */
@@ -93,8 +96,8 @@
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
-#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (0.2 second). */
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(10, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.1 seconds). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory timeout (4 seconds). */
 
@@ -113,9 +116,25 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(1000)
+#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(100)
 APP_TIMER_DEF(m_notification_timer_id);
 static uint8_t m_custom_value[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
+
+
+
+//Initializing TWI0 instance
+#define TWI_INSTANCE_ID     0
+
+//I2C Pins Settings, you change them to any other pins
+#define TWI_SCL_M           27         //I2C SCL Pin
+#define TWI_SDA_M           26         //I2C SDA Pin
+
+// Create a Handle for the twi communication
+const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
+
+bool sendAccelData = false;
+
+ADXL355 sensor;
 
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
@@ -141,13 +160,15 @@ static void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_s
     switch(p_evt->evt_type)
     {
         case BLE_ACCELEROMETER_EVT_NOTIFICATION_ENABLED:
-            err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
-            APP_ERROR_CHECK(err_code);
+            //err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
+            //APP_ERROR_CHECK(err_code);
+            sendAccelData = true;
             break;
 
         case BLE_ACCELEROMETER_EVT_NOTIFICATION_DISABLED:
-            err_code = app_timer_stop(m_notification_timer_id);
-           APP_ERROR_CHECK(err_code);
+           // err_code = app_timer_stop(m_notification_timer_id);
+           //APP_ERROR_CHECK(err_code);
+           sendAccelData = false;
             break;
         case BLE_ACCELEROMETER_EVT_CONNECTED:
             break;
@@ -173,14 +194,13 @@ static void notification_timeout_handler(void * p_context)
 {
     UNUSED_PARAMETER(p_context);
     ret_code_t err_code;
+        // create arrays which will hold x,y & z co-ordinates values of acc
     
-    // Increment the value of m_custom_value before nortifing it.
-    m_custom_value[0]++;
 
 
     
-    err_code = ble_accelerometer_custom_value_update(&m_accelerometer, m_custom_value);
-    APP_ERROR_CHECK(err_code);
+    //err_code = ble_accelerometer_custom_value_update(&m_accelerometer, m_custom_value);
+    //APP_ERROR_CHECK(err_code);
 }
 
 /* YOUR_JOB: Declare all services structure your application is using
@@ -792,6 +812,53 @@ static void advertising_start(bool erase_bonds)
 
 
 
+
+
+
+//Event Handler
+void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
+{
+    //Check the event to see what type of event occurred
+    switch (p_event->type)
+    {
+        //If data transmission or receiving is finished
+	case NRF_DRV_TWI_EVT_DONE:
+          sensor.mTransferDone = true;
+          break;
+        
+        default:
+          // do nothing
+          break;
+    }
+}
+
+//Initialize the TWI as Master device
+void twi_master_init(void)
+{
+    ret_code_t err_code;
+
+    // Configure the settings for twi communication
+    const nrf_drv_twi_config_t twi_config = {
+       .scl                = TWI_SCL_M,  //SCL Pin
+       .sda                = TWI_SDA_M,  //SDA Pin
+       .frequency          = NRF_DRV_TWI_FREQ_400K, //Communication Speed
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGH, //Interrupt Priority(Note: if using Bluetooth then select priority carefully)
+       .clear_bus_init     = false //automatically clear bus
+    };
+
+
+    //A function to initialize the twi communication
+    err_code = nrf_drv_twi_init(&m_twi, &twi_config, twi_handler, NULL);
+    APP_ERROR_CHECK(err_code);
+    
+    //Enable the TWI Communication
+    nrf_drv_twi_enable(&m_twi);
+}
+
+
+
+
+
 /**@brief Function for application main entry.
  */
 int main(void)
@@ -817,10 +884,71 @@ int main(void)
 
     advertising_start(erase_bonds);
 
+
+
+
+    bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS); // initialize the leds and buttons
+
+    twi_master_init(); // initialize the twi 
+    nrf_delay_ms(1000); // give some delay
+
+    NRF_LOG_INFO("ADXL355 Initilising...\n"); // if it failed to initialize then print a message
+
+    while(adxl355_init(&sensor, &m_twi) == false) // wait until ADX355 sensor is successfully initialized
+    { ; // if it failed to initialize then print a message
+      nrf_delay_ms(1000);
+    }
+
+    adxl355_setPowerControl(&sensor, ADXL355_POWER_CONTROL_MEASUREMENT_MODE);
+    adxl355_setFilterSettings(&sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
+
+    NRF_LOG_INFO("ADXL355 Init Successfully!!!"); 
+
     // Enter main loop.
     for (;;)
     {
         idle_state_handle();
+
+        static int32_t AccValue[3];
+    static uint16_t tempValue;
+    
+    // Increment the value of m_custom_value before nortifing it.
+
+    if(adxl355_ReadAcc(&sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
+      {
+        float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
+        float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
+        float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
+
+
+          //NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
+          //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
+          //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(zGs) ); // display the read values
+          
+          m_custom_value[0]++;
+          if (sendAccelData)
+          {
+            uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, AccValue);
+            APP_ERROR_CHECK(err_code);
+          }
+          
+      }
+      else
+      {
+        NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
+      }
+
+    
+      adxl355_ReadTemp(&sensor, &tempValue);
+
+      float temp = -0.11049723765f * ((float)tempValue - 1852.0f) + 25.0f;
+
+      //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
+
+      NRF_LOG_FLUSH();
+
+      nrf_delay_ms(80);
+
     }
 }
 

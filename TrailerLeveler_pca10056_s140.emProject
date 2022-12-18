@@ -46,6 +46,12 @@
     <configuration Name="Debug" debug_additional_load_file2="" />
     <folder Name="Application">
       <folder
+        Name="ADXL355"
+        exclude=""
+        filter="*.*"
+        path="ADXL355"
+        recurse="No" />
+      <folder
         Name="Services"
         exclude=""
         filter="*.*"
@@ -96,12 +102,14 @@
     </folder>
     <folder Name="nRF_Drivers">
       <file file_name="../nRF5_SDK_current/integration/nrfx/legacy/nrf_drv_clock.c" />
+      <file file_name="../nRF5_SDK_Current/integration/nrfx/legacy/nrf_drv_twi.c" />
       <file file_name="../nRF5_SDK_current/integration/nrfx/legacy/nrf_drv_uart.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/soc/nrfx_atomic.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_clock.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_gpiote.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/prs/nrfx_prs.c" />
       <file file_name="../nRF5_SDK_Current/modules/nrfx/drivers/src/nrfx_saadc.c" />
+      <file file_name="../nRF5_SDK_Current/modules/nrfx/drivers/src/nrfx_twi.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_uarte.c" />
     </folder>

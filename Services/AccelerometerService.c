@@ -125,8 +125,6 @@ void ble_accelerometer_on_ble_evt( ble_evt_t const * p_ble_evt, void * p_context
         return;
     }
 
-    NRF_LOG_INFO("BLE Event Received.");
-
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
