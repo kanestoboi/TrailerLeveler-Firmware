@@ -45,12 +45,16 @@
       project_type="Executable" />
     <configuration Name="Debug" debug_additional_load_file2="" />
     <folder Name="Application">
-      <folder
-        Name="ADXL355"
-        exclude=""
-        filter="*.*"
-        path="ADXL355"
-        recurse="No" />
+      <folder Name="Components">
+        <folder Name="Accelerometers">
+          <folder
+            Name="ADXL355"
+            exclude=""
+            filter="*.*"
+            path="Components/Accelerometers/ADXL355"
+            recurse="No" />
+        </folder>
+      </folder>
       <folder
         Name="Services"
         exclude=""

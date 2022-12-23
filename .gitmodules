@@ -1,0 +1,3 @@
+[submodule "Components/Accelerometers/ADXL355"]
+	path = Components/Accelerometers/ADXL355
+	url = https://github.com/kanestoboi/nRF5-ADXL355.git

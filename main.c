@@ -84,12 +84,14 @@
 #include "nrf_delay.h"
 
 #include "Services/AccelerometerService.h"
-#include "ADXL355/adxl355.h"
+#include "Components/Accelerometers/ADXL355/adxl355.h"
 #include "nrf_drv_twi.h"
 
+#include "math.h"
 
-#define DEVICE_NAME                     "Nordic_Template"                       /**< Name of device. Will be included in the advertising data. */
-#define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
+
+#define DEVICE_NAME                     "Trailer Leveler"                       /**< Name of device. Will be included in the advertising data. */
+#define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
 #define APP_ADV_DURATION                18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
@@ -97,7 +99,7 @@
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(10, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.1 seconds). */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (0.2 second). */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (0.2 second). */
 #define SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory timeout (4 seconds). */
 
@@ -116,10 +118,8 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                              /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(100)
+#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(80)
 APP_TIMER_DEF(m_notification_timer_id);
-static uint8_t m_custom_value[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
-
 
 
 //Initializing TWI0 instance
@@ -135,7 +135,6 @@ const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 bool sendAccelData = false;
 
 ADXL355 sensor;
-
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
@@ -160,14 +159,13 @@ static void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_s
     switch(p_evt->evt_type)
     {
         case BLE_ACCELEROMETER_EVT_NOTIFICATION_ENABLED:
-            //err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
-            //APP_ERROR_CHECK(err_code);
+            err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
+            APP_ERROR_CHECK(err_code);
             sendAccelData = true;
             break;
 
         case BLE_ACCELEROMETER_EVT_NOTIFICATION_DISABLED:
-           // err_code = app_timer_stop(m_notification_timer_id);
-           //APP_ERROR_CHECK(err_code);
+           
            sendAccelData = false;
             break;
         case BLE_ACCELEROMETER_EVT_CONNECTED:
@@ -196,7 +194,53 @@ static void notification_timeout_handler(void * p_context)
     ret_code_t err_code;
         // create arrays which will hold x,y & z co-ordinates values of acc
     
+    
+    static int32_t AccValue[3];
+    static uint16_t tempValue;
+    
+    // Increment the value of m_custom_value before nortifing it.
 
+    if(adxl355_ReadAcc(&sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
+    {
+    /*
+      float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
+      float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
+      float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
+      
+        
+        NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
+        NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
+        NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
+
+
+        NRF_LOG_RAW_INFO("\n");
+
+        NRF_LOG_FLUSH();
+        //*/
+
+        //if (sendAccelData)
+        //{
+          uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)AccValue);
+          APP_ERROR_CHECK(err_code);
+        //}
+        
+    }
+    else
+    {
+      NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
+    }
+    
+      adxl355_ReadTemp(&sensor, &tempValue);
+
+      float temp = -0.11049723765f * ((float)tempValue - 1852.0f) + 25.0f;
+
+      //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
+
+      NRF_LOG_FLUSH();
+
+
+    
+    
 
     
     //err_code = ble_accelerometer_custom_value_update(&m_accelerometer, m_custom_value);
@@ -551,6 +595,9 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected.");
+            err_code = app_timer_stop(m_notification_timer_id);
+            APP_ERROR_CHECK(err_code);
+            sendAccelData = false;
             // LED indication will be changed when advertising starts.
             break;
 
@@ -721,10 +768,12 @@ static void advertising_init(void)
     memset(&init, 0, sizeof(init));
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-    init.advdata.include_appearance      = true;
+    init.advdata.include_appearance      = false;
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
+    
+    // Commented out to allow for full name to be in advertising packet
+    //init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    //init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
 
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
@@ -856,7 +905,37 @@ void twi_master_init(void)
 }
 
 
+int32_t map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2)
+{
+  return low2 + (int32_t)round(((float)((high2 - low2) * (value - low1)) / (float)(high1-low1)));
+} 
 
+void calc_xy_angles(int32_t accel_value_x, int32_t accel_value_y, int32_t accel_value_z){
+
+  uint32_t minVal = -262143;
+  uint32_t maxVal = 262144;
+
+  float x, y, z;
+
+  float RAD_TO_DEG = 57.296;
+
+  int32_t xangle = map(accel_value_x, minVal, maxVal, -90, 90);
+  int32_t yangle = map(accel_value_y, minVal, maxVal, -90, 90);
+  int32_t zangle = map(accel_value_z, minVal, maxVal, -90, 90);
+
+  x = RAD_TO_DEG * (atan2((float)-yangle, (float)-zangle) + 3.14);
+  y = RAD_TO_DEG * (atan2((float)-xangle, (float)-zangle) + 3.14);
+  z = RAD_TO_DEG * (atan2((float)-yangle, (float)-xangle) + 3.14);
+
+  NRF_LOG_RAW_INFO("x: %X ,", accel_value_x);
+  NRF_LOG_RAW_INFO("x acc: %d ,", accel_value_x); // display the read values
+  NRF_LOG_RAW_INFO("y acc: %d ,", accel_value_y); // display the read values
+  NRF_LOG_RAW_INFO("z acc: %d ,", accel_value_z); // display the read values
+  NRF_LOG_RAW_INFO("x Angle: " NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(x)); // display the read values
+
+  NRF_LOG_FLUSH();
+
+}
 
 
 /**@brief Function for application main entry.
@@ -884,15 +963,13 @@ int main(void)
 
     advertising_start(erase_bonds);
 
-
-
-
     bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS); // initialize the leds and buttons
 
     twi_master_init(); // initialize the twi 
     nrf_delay_ms(1000); // give some delay
 
     NRF_LOG_INFO("ADXL355 Initilising...\n"); // if it failed to initialize then print a message
+    NRF_LOG_FLUSH();
 
     while(adxl355_init(&sensor, &m_twi) == false) // wait until ADX355 sensor is successfully initialized
     { ; // if it failed to initialize then print a message
@@ -901,55 +978,19 @@ int main(void)
 
     adxl355_setPowerControl(&sensor, ADXL355_POWER_CONTROL_MEASUREMENT_MODE);
     adxl355_setFilterSettings(&sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
+    adxl_setRange(&sensor, ADXL_RANGE_2G);
 
     NRF_LOG_INFO("ADXL355 Init Successfully!!!"); 
+    NRF_LOG_FLUSH();
 
     // Enter main loop.
     for (;;)
     {
         idle_state_handle();
 
-        static int32_t AccValue[3];
-    static uint16_t tempValue;
-    
-    // Increment the value of m_custom_value before nortifing it.
-
-    if(adxl355_ReadAcc(&sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
-      {
-        float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
-        float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
-        float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
-
-
-          //NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
-          //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
-          //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(zGs) ); // display the read values
-          
-          m_custom_value[0]++;
-          if (sendAccelData)
-          {
-            uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, AccValue);
-            APP_ERROR_CHECK(err_code);
-          }
-          
-      }
-      else
-      {
-        NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
-      }
-
-    
-      adxl355_ReadTemp(&sensor, &tempValue);
-
-      float temp = -0.11049723765f * ((float)tempValue - 1852.0f) + 25.0f;
-
-      //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
-
-      NRF_LOG_FLUSH();
-
-      nrf_delay_ms(80);
-
     }
+
+    
 }
 
 
