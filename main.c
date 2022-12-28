@@ -976,7 +976,7 @@ int main(void)
       nrf_delay_ms(1000);
     }
 
-    adxl355_setPowerControl(&sensor, ADXL355_POWER_CONTROL_MEASUREMENT_MODE);
+    adxl355_setPowerControl(&sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
     adxl355_setFilterSettings(&sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
     adxl_setRange(&sensor, ADXL_RANGE_2G);
 
