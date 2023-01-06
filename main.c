@@ -89,6 +89,14 @@
 
 #include "math.h"
 
+// DFU-related #includes
+#include "nrf_power.h"
+#include "nrf_dfu_ble_svci_bond_sharing.h"
+#include "nrf_svci_async_function.h"
+#include "nrf_svci_async_handler.h"
+#include "ble_dfu.h"
+#include "nrf_bootloader_info.h"
+
 
 #define DEVICE_NAME                     "Trailer Leveler"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
@@ -142,7 +150,101 @@ BLE_ADVERTISING_DEF(m_advertising);                                             
 BLE_ACCELEROMETER_DEF(m_accelerometer);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
+/**@brief Handler for shutdown preparation.
+ *
+ * @details During shutdown procedures, this function will be called at a 1 second interval
+ *          untill the function returns true. When the function returns true, it means that the
+ *          app is ready to reset to DFU mode.
+ *
+ * @param[in]   event   Power manager event.
+ *
+ * @retval  True if shutdown is allowed by this power manager handler, otherwise false.
+ */
+static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event)
+{
+    switch (event)
+    {
+        case NRF_PWR_MGMT_EVT_PREPARE_DFU:
+            NRF_LOG_INFO("Power management wants to reset to DFU mode.");
+            // YOUR_JOB: Get ready to reset into DFU mode
+            //
+            // If you aren't finished with any ongoing tasks, return "false" to
+            // signal to the system that reset is impossible at this stage.
+            //
+            // Here is an example using a variable to delay resetting the device.
+            //
+            // if (!m_ready_for_reset)
+            // {
+            //      return false;
+            // }
+            // else
+            //{
+            //
+            //    // Device ready to enter
+            //    uint32_t err_code;
+            //    err_code = sd_softdevice_disable();
+            //    APP_ERROR_CHECK(err_code);
+            //    err_code = app_timer_stop_all();
+            //    APP_ERROR_CHECK(err_code);
+            //}
+            break;
 
+        default:
+            // YOUR_JOB: Implement any of the other events available from the power management module:
+            //      -NRF_PWR_MGMT_EVT_PREPARE_SYSOFF
+            //      -NRF_PWR_MGMT_EVT_PREPARE_WAKEUP
+            //      -NRF_PWR_MGMT_EVT_PREPARE_RESET
+            return true;
+    }
+
+    NRF_LOG_INFO("Power management allowed to reset to DFU mode.");
+    return true;
+}
+
+/**@brief Register application shutdown handler with priority 0.
+ */
+NRF_PWR_MGMT_HANDLER_REGISTER(app_shutdown_handler, 0);
+
+static void buttonless_dfu_sdh_state_observer(nrf_sdh_state_evt_t state, void * p_context)
+{
+    if (state == NRF_SDH_EVT_STATE_DISABLED)
+    {
+        // Softdevice was disabled before going into reset. Inform bootloader to skip CRC on next boot.
+        nrf_power_gpregret2_set(BOOTLOADER_DFU_SKIP_CRC);
+
+        //Go to system off.
+        nrf_pwr_mgmt_shutdown(NRF_PWR_MGMT_SHUTDOWN_GOTO_SYSOFF);
+    }
+}
+
+/* nrf_sdh state observer. */
+NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
+{
+    .handler = buttonless_dfu_sdh_state_observer,
+};
+
+static void ble_dfu_buttonless_evt_handler(ble_dfu_buttonless_evt_type_t event)
+{
+    ret_code_t    err_code;
+
+    switch (event)
+    {
+        case BLE_DFU_EVT_BOOTLOADER_ENTER_PREPARE:
+            NRF_LOG_INFO("Device is preparing to enter bootloader mode\r\n");
+            break;
+ 
+        case BLE_DFU_EVT_BOOTLOADER_ENTER:
+            NRF_LOG_INFO("Device will enter bootloader mode\r\n");
+            break;
+ 
+        case BLE_DFU_EVT_BOOTLOADER_ENTER_FAILED:
+            NRF_LOG_ERROR("Device failed to enter bootloader mode\r\n");
+            break;
+        default:
+            NRF_LOG_INFO("Unknown event from ble_dfu.\r\n");
+            break;
+    }
+}
 
 /**@brief Function for handling the Custom Service Service events.
  *
@@ -434,6 +536,16 @@ static void services_init(void)
     accelerometer_service_init.evt_handler = on_accelerometer_evt;
 	
     err_code = ble_acceleration_service_init(&m_accelerometer, &accelerometer_service_init);
+    APP_ERROR_CHECK(err_code);
+    //*/
+
+    // Initialize the DFU service
+      
+    ble_dfu_buttonless_init_t dfus_init =
+    {
+        .evt_handler = ble_dfu_buttonless_evt_handler
+    };
+    err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
     //*/
     
@@ -905,47 +1017,26 @@ void twi_master_init(void)
 }
 
 
-int32_t map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2)
-{
-  return low2 + (int32_t)round(((float)((high2 - low2) * (value - low1)) / (float)(high1-low1)));
-} 
-
-void calc_xy_angles(int32_t accel_value_x, int32_t accel_value_y, int32_t accel_value_z){
-
-  uint32_t minVal = -262143;
-  uint32_t maxVal = 262144;
-
-  float x, y, z;
-
-  float RAD_TO_DEG = 57.296;
-
-  int32_t xangle = map(accel_value_x, minVal, maxVal, -90, 90);
-  int32_t yangle = map(accel_value_y, minVal, maxVal, -90, 90);
-  int32_t zangle = map(accel_value_z, minVal, maxVal, -90, 90);
-
-  x = RAD_TO_DEG * (atan2((float)-yangle, (float)-zangle) + 3.14);
-  y = RAD_TO_DEG * (atan2((float)-xangle, (float)-zangle) + 3.14);
-  z = RAD_TO_DEG * (atan2((float)-yangle, (float)-xangle) + 3.14);
-
-  NRF_LOG_RAW_INFO("x: %X ,", accel_value_x);
-  NRF_LOG_RAW_INFO("x acc: %d ,", accel_value_x); // display the read values
-  NRF_LOG_RAW_INFO("y acc: %d ,", accel_value_y); // display the read values
-  NRF_LOG_RAW_INFO("z acc: %d ,", accel_value_z); // display the read values
-  NRF_LOG_RAW_INFO("x Angle: " NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(x)); // display the read values
-
-  NRF_LOG_FLUSH();
-
-}
-
-
 /**@brief Function for application main entry.
  */
 int main(void)
 {
     bool erase_bonds;
 
+        ret_code_t err_code;
+
+
     // Initialize.
     log_init();
+
+    // Initialize the async SVCI interface to bootloader before any interrupts are enabled.
+    
+    err_code = ble_dfu_buttonless_async_svci_init();
+    APP_ERROR_CHECK(err_code);
+    //*/
+
+    nrf_delay_ms(1000); // give some delay
+
     timers_init();
     buttons_leds_init(&erase_bonds);
     power_management_init();
@@ -958,7 +1049,8 @@ int main(void)
     peer_manager_init();
 
     // Start execution.
-    NRF_LOG_INFO("Template example started.");
+    NRF_LOG_INFO("Trailer Leveler Started.");
+    NRF_LOG_FLUSH();
     application_timers_start();
 
     advertising_start(erase_bonds);
@@ -966,13 +1058,14 @@ int main(void)
     bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS); // initialize the leds and buttons
 
     twi_master_init(); // initialize the twi 
-    nrf_delay_ms(1000); // give some delay
 
-    NRF_LOG_INFO("ADXL355 Initilising...\n"); // if it failed to initialize then print a message
+    NRF_LOG_INFO("ADXL355 Initilising Firmware..."); // if it failed to initialize then print a message
     NRF_LOG_FLUSH();
 
+
     while(adxl355_init(&sensor, &m_twi) == false) // wait until ADX355 sensor is successfully initialized
-    { ; // if it failed to initialize then print a message
+    {
+      NRF_LOG_INFO("Failed to initialise...retrying"); // if it failed to initialize then print a message
       nrf_delay_ms(1000);
     }
 
@@ -980,14 +1073,13 @@ int main(void)
     adxl355_setFilterSettings(&sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
     adxl_setRange(&sensor, ADXL_RANGE_2G);
 
-    NRF_LOG_INFO("ADXL355 Init Successfully!!!"); 
+    NRF_LOG_INFO("ADXL355 setup complete"); 
     NRF_LOG_FLUSH();
 
     // Enter main loop.
     for (;;)
     {
         idle_state_handle();
-
     }
 
     
