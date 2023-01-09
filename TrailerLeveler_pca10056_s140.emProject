@@ -53,6 +53,10 @@
             filter="*.*"
             path="Components/Accelerometers/ADXL355"
             recurse="No" />
+          <folder Name="MPU6050">
+            <file file_name="Components/Accelerometers/MPU6050/mpu6050.c" />
+            <file file_name="Components/Accelerometers/MPU6050/mpu6050.h" />
+          </folder>
         </folder>
       </folder>
       <folder

@@ -1,3 +1,6 @@
 [submodule "Components/Accelerometers/ADXL355"]
 	path = Components/Accelerometers/ADXL355
 	url = https://github.com/kanestoboi/nRF5-ADXL355.git
+[submodule "Components/Accelerometers/MPU6050"]
+	path = Components/Accelerometers/MPU6050
+	url = https://github.com/kanestoboi/nRF5_MPU6050.git
