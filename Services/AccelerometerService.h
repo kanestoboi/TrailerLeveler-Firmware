@@ -25,25 +25,18 @@
 
 
 
-#define ACCELEROMETER_SERVICE_UUID_BASE {0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x01, 0x00, 0x40, 0x6E}
+#define ACCELEROMETER_SERVICE_UUID_BASE {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0xEB, 0xA1, 0xED, 0x11, 0xD9, 0x7D, 0x02, 0xF7, 0x49, 0x76}
 
 
-#define ACCELEROMETER_SERVICE_UUID               0x0001
-#define ACCELEROMETER_VALUE_CHAR_UUID            0x0003
+#define ACCELEROMETER_SERVICE_UUID               0x1400
+#define ACCELEROMETER_ADXL355_VALUE_CHAR_UUID    0x1401
+#define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID    0x1402
 
 #define BLE_ACCELEROMETER_DEF(_name)                          \
 static ble_accelerometer_service_t _name;                     \
 NRF_SDH_BLE_OBSERVER(_name ## _obs,                           \
                      BLE_HRS_BLE_OBSERVER_PRIO,               \
                      ble_accelerometer_on_ble_evt, &_name)
-
-
-
-
-
-
-
-
 
 
 // Forward declaration of the ble_accerometer_service_t type.
