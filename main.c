@@ -85,6 +85,7 @@
 
 #include "Services/AccelerometerService.h"
 #include "Components/Accelerometers/ADXL355/adxl355.h"
+#include "Components/Accelerometers/MPU6050/mpu6050.h"
 #include "nrf_drv_twi.h"
 
 #include "math.h"
@@ -142,7 +143,7 @@ const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 
 bool sendAccelData = false;
 
-ADXL355 sensor;
+MPU6050 sensor;
 
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
@@ -297,12 +298,12 @@ static void notification_timeout_handler(void * p_context)
         // create arrays which will hold x,y & z co-ordinates values of acc
     
     
-    static int32_t AccValue[3];
+    static int16_t AccValue[3];
     static uint16_t tempValue;
     
     // Increment the value of m_custom_value before nortifing it.
 
-    if(adxl355_ReadAcc(&sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
+    if(mpu6050_ReadAcc(&sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
     {
     /*
       float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
@@ -322,7 +323,11 @@ static void notification_timeout_handler(void * p_context)
 
         //if (sendAccelData)
         //{
-          uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)AccValue);
+          static int16_t sendVal[3];
+          sendVal[2] = AccValue[0] << 8 | AccValue[0] >> 8;
+          sendVal[1] = AccValue[1] << 8 | AccValue[1] >> 8;
+          sendVal[0] = AccValue[2] << 8 | AccValue[2] >> 8;
+          uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)sendVal);
           APP_ERROR_CHECK(err_code);
         //}
         
@@ -331,13 +336,13 @@ static void notification_timeout_handler(void * p_context)
     {
       NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
     }
-    
+    /*
       adxl355_ReadTemp(&sensor, &tempValue);
 
       float temp = -0.11049723765f * ((float)tempValue - 1852.0f) + 25.0f;
 
       //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
-
+*/
       NRF_LOG_FLUSH();
 
 
@@ -1059,21 +1064,25 @@ int main(void)
 
     twi_master_init(); // initialize the twi 
 
-    NRF_LOG_INFO("ADXL355 Initilising Firmware..."); // if it failed to initialize then print a message
+    NRF_LOG_INFO("MPU6050 Initilising Firmware..."); // if it failed to initialize then print a message
     NRF_LOG_FLUSH();
 
 
-    while(adxl355_init(&sensor, &m_twi) == false) // wait until ADX355 sensor is successfully initialized
+    while(mpu6050_init(&sensor, &m_twi) == false) // wait until ADX355 sensor is successfully initialized
     {
       NRF_LOG_INFO("Failed to initialise...retrying"); // if it failed to initialize then print a message
       nrf_delay_ms(1000);
     }
 
-    adxl355_setPowerControl(&sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
-    adxl355_setFilterSettings(&sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
-    adxl_setRange(&sensor, ADXL_RANGE_2G);
+    
+  (void)mpu6050_register_write(&sensor, MPU6050_PWR_MGMT1_REG , 0x00); 
+  (void)mpu6050_register_write(&sensor, MPU6050_SAMPLE_RATE_REG , 0x07); 
+  (void)mpu6050_register_write(&sensor, MPU6050_CONFIG_REG , 0x06); 						
+  (void)mpu6050_register_write(&sensor, MPU6050_INT_EN_REG, 0x00); 
+  (void)mpu6050_register_write(&sensor, MPU6050_GYRO_CONFIG_REG , 0x18); 
+  (void)mpu6050_register_write(&sensor, MPU6050_ACCEL_CONFIG_REG,0x00);
 
-    NRF_LOG_INFO("ADXL355 setup complete"); 
+    NRF_LOG_INFO("MPU6050 setup complete"); 
     NRF_LOG_FLUSH();
 
     // Enter main loop.

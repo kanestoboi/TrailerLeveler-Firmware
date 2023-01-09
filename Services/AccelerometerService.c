@@ -99,9 +99,9 @@ uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerome
 
     attr_char_value.p_uuid    = &ble_uuid;
     attr_char_value.p_attr_md = &attr_md;
-    attr_char_value.init_len  = 12*sizeof(uint8_t);
+    attr_char_value.init_len  = 6*sizeof(uint8_t);
     attr_char_value.init_offs = 0;
-    attr_char_value.max_len   = 12*sizeof(uint8_t);
+    attr_char_value.max_len   = 6*sizeof(uint8_t);
 
     err_code = sd_ble_gatts_characteristic_add(p_accelerometer_service->service_handle, &char_md,
                                                &attr_char_value,
@@ -231,7 +231,7 @@ uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_a
     // Initialize value struct.
     memset(&gatts_value, 0, sizeof(gatts_value));
 
-    gatts_value.len     = 12*sizeof(uint8_t);
+    gatts_value.len     = 6*sizeof(uint8_t);
     gatts_value.offset  = 0;
     gatts_value.p_value = custom_value;
 
