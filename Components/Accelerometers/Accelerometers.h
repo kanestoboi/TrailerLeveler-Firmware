@@ -1,0 +1,10 @@
+#ifndef ACCELEROMETERS_H
+#define ACCELEROMETERS_H
+
+typedef enum
+{
+    ACCELEROMETER_MPU6050,
+    ACCELEROMETER_ADXL355
+} accelerometer_t;
+
+#endif /* ACCELEROMETER_SERVICE_H */
