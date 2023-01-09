@@ -57,6 +57,7 @@
             <file file_name="Components/Accelerometers/MPU6050/mpu6050.c" />
             <file file_name="Components/Accelerometers/MPU6050/mpu6050.h" />
           </folder>
+          <file file_name="Components/Accelerometers/Accelerometers.h" />
         </folder>
       </folder>
       <folder

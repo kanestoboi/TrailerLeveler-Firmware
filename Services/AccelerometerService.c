@@ -14,7 +14,7 @@
  */
                                                                                     
 
-uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer)
 {
     if (p_accelerometer_service == NULL || p_ble_accelerometer_service_init == NULL)
     {
@@ -45,7 +45,7 @@ uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerom
     p_accelerometer_service->conn_handle           = BLE_CONN_HANDLE_INVALID;
 
     // Add accelerometer value characteristic
-    return accelerometer_value_char_add(p_accelerometer_service, p_ble_accelerometer_service_init);
+    return accelerometer_value_char_add(p_accelerometer_service, p_ble_accelerometer_service_init, accelerometer);
 }    
 
 /**@brief Function for adding the Custom Value characteristic.
@@ -55,7 +55,7 @@ uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerom
  *
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
-uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer)
 {
     uint32_t            err_code;
     ble_gatts_char_md_t char_md;
@@ -93,7 +93,16 @@ uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerome
     attr_md.vlen       = 0;
 
     ble_uuid.type = p_accelerometer_service->uuid_type;
-    ble_uuid.uuid = ACCELEROMETER_VALUE_CHAR_UUID;
+
+    if (accelerometer == ACCELEROMETER_ADXL355)
+    {
+      ble_uuid.uuid = ACCELEROMETER_ADXL355_VALUE_CHAR_UUID;
+    }
+    else if (accelerometer == ACCELEROMETER_MPU6050)
+    {
+      ble_uuid.uuid = ACCELEROMETER_MPU6050_VALUE_CHAR_UUID;
+    }
+
 
     memset(&attr_char_value, 0, sizeof(attr_char_value));
 
@@ -101,7 +110,16 @@ uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerome
     attr_char_value.p_attr_md = &attr_md;
     attr_char_value.init_len  = 6*sizeof(uint8_t);
     attr_char_value.init_offs = 0;
-    attr_char_value.max_len   = 6*sizeof(uint8_t);
+
+    if (accelerometer == ACCELEROMETER_ADXL355)
+    {
+      attr_char_value.max_len   = 12*sizeof(uint8_t);
+    }
+    else if (accelerometer == ACCELEROMETER_MPU6050)
+    {
+      attr_char_value.max_len   = 6*sizeof(uint8_t);
+    }
+    
 
     err_code = sd_ble_gatts_characteristic_add(p_accelerometer_service->service_handle, &char_md,
                                                &attr_char_value,
@@ -218,7 +236,7 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
 }
 
 
-uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value)
+uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
 {
     if (p_accelerometer_service == NULL)
     {
@@ -231,7 +249,7 @@ uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_a
     // Initialize value struct.
     memset(&gatts_value, 0, sizeof(gatts_value));
 
-    gatts_value.len     = 6*sizeof(uint8_t);
+    gatts_value.len     = custom_value_length*sizeof(uint8_t);
     gatts_value.offset  = 0;
     gatts_value.p_value = custom_value;
 

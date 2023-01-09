@@ -23,6 +23,8 @@
 #include "ble_srv_common.h"
 #include "nrf_sdh_ble.h"
 
+#include "../Components/Accelerometers/Accelerometers.h"
+
 
 
 #define ACCELEROMETER_SERVICE_UUID_BASE {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0xEB, 0xA1, 0xED, 0x11, 0xD9, 0x7D, 0x02, 0xF7, 0x49, 0x76}
@@ -87,9 +89,9 @@ struct ble_accerometer_service_s
  *
  * @return      NRF_SUCCESS on successful initialization of service, otherwise an error code.
  */
-uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 
-uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 
 /**@brief Function for handling the Application's BLE Stack events.
  *
@@ -121,7 +123,7 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
 
-uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value);
+uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
 
 #endif /* ACCELEROMETER_SERVICE_H */
