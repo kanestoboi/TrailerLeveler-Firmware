@@ -1107,7 +1107,7 @@ int main(void)
 
 
     while(mpu6050_init(&mpu6050Sensor, &m_twi) == false &&
-          mpu6050_init(&mpu6050Sensor, &m_twi) == false) 
+          adxl355_init(&adxl355Sensor, &m_twi) == false) 
     {
       NRF_LOG_INFO("Failed to initialise...retrying"); // if it failed to initialize then print a message
       nrf_delay_ms(1000);
