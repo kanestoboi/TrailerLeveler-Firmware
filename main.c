@@ -89,6 +89,8 @@
 #include "Components/Accelerometers/Accelerometers.h"
 #include "nrf_drv_twi.h"
 
+#include "Components/LED/nrf_buddy_led.h"
+
 #include "math.h"
 
 // DFU-related #includes
@@ -136,8 +138,8 @@ APP_TIMER_DEF(m_notification_timer_id);
 #define TWI_INSTANCE_ID     0
 
 //I2C Pins Settings, you change them to any other pins
-#define TWI_SCL_M           27         //I2C SCL Pin
-#define TWI_SDA_M           26         //I2C SDA Pin
+#define TWI_SCL_M           13         //I2C SCL Pin
+#define TWI_SDA_M           14         //I2C SDA Pin
 
 // Create a Handle for the twi communication
 const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
@@ -151,6 +153,8 @@ NRF_BLE_GATT_DEF(m_gatt);                                                       
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 BLE_ACCELEROMETER_DEF(m_accelerometer);
+
+void getADXL355AccelerometerData(int32_t *AccValue);
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 /**@brief Handler for shutdown preparation.
@@ -298,9 +302,7 @@ static void notification_timeout_handler(void * p_context)
     UNUSED_PARAMETER(p_context);
     ret_code_t err_code;
         // create arrays which will hold x,y & z co-ordinates values of acc
-    
-    
-    
+   
     static uint16_t tempValue;
     
     // Increment the value of m_custom_value before nortifing it.
@@ -341,33 +343,13 @@ static void notification_timeout_handler(void * p_context)
         NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
       }
     }
-    else if (adxl355Sensor.initialised)
+    else*/ if (adxl355Sensor.initialised)
     {
       static int32_t AccValue[3];
-      if(adxl355_ReadAcc(&adxl355Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
-      {
-      /*
-        float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
-        float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
-        float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
-      
-        
-          NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
-          NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
-          NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
+      getADXL355AccelerometerData(AccValue);
 
-
-          NRF_LOG_RAW_INFO("\n");
-
-          NRF_LOG_FLUSH();
-          //*/
-
-          //if (sendAccelData)
-          //{
-            uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)AccValue, 12);
-            APP_ERROR_CHECK(err_code);
-          //}
-      }
+      uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)AccValue, (uint8_t)12);
+      APP_ERROR_CHECK(err_code);
     }
     /*
       adxl355_ReadTemp(&sensor, &tempValue);
@@ -376,15 +358,7 @@ static void notification_timeout_handler(void * p_context)
 
       //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
 */
-      NRF_LOG_FLUSH();
 
-
-    
-    
-
-    
-    //err_code = ble_accelerometer_custom_value_update(&m_accelerometer, m_custom_value);
-    //APP_ERROR_CHECK(err_code);
 }
 
 /* YOUR_JOB: Declare all services structure your application is using
@@ -590,7 +564,7 @@ static void services_init(void)
     //*/
 
     // Initialize the DFU service
-      
+    
     ble_dfu_buttonless_init_t dfus_init =
     {
         .evt_handler = ble_dfu_buttonless_evt_handler
@@ -703,7 +677,7 @@ static void sleep_mode_enter(void)
 {
     ret_code_t err_code;
 
-    err_code = bsp_indication_set(BSP_INDICATE_IDLE);
+    err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_IDLE);
     APP_ERROR_CHECK(err_code);
 
     // Prepare wakeup buttons.
@@ -730,7 +704,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
     {
         case BLE_ADV_EVT_FAST:
             NRF_LOG_INFO("Fast advertising.");
-            err_code = bsp_indication_set(BSP_INDICATE_ADVERTISING);
+            err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_ADVERTISING);
             APP_ERROR_CHECK(err_code);
             break;
 
@@ -765,7 +739,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected.");
-            err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
+            nrf_buddy_led_indication(NRF_BUDDY_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
@@ -950,25 +924,6 @@ static void advertising_init(void)
 }
 
 
-/**@brief Function for initializing buttons and leds.
- *
- * @param[out] p_erase_bonds  Will be true if the clear bonding button was pressed to wake the application up.
- */
-static void buttons_leds_init(bool * p_erase_bonds)
-{
-    ret_code_t err_code;
-    bsp_event_t startup_event;
-
-    err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = bsp_btn_ble_init(NULL, &startup_event);
-    APP_ERROR_CHECK(err_code);
-
-    *p_erase_bonds = (startup_event == BSP_EVENT_CLEAR_BONDING_DATA);
-}
-
-
 /**@brief Function for initializing the nrf log module.
  */
 static void log_init(void)
@@ -1015,16 +970,9 @@ static void advertising_start(bool erase_bonds)
     else
     {
         ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
-
         APP_ERROR_CHECK(err_code);
     }
 }
-
-
-
-
-
-
 
 //Event Handler
 void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
@@ -1034,11 +982,8 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
           {
               //If data transmission or receiving is finished
       	case NRF_DRV_TWI_EVT_DONE:
-
           mpu6050Sensor.mTransferDone = true;
           adxl355Sensor.mTransferDone = true;
-          
-          
           break;
         
         default:
@@ -1071,17 +1016,44 @@ void twi_master_init(void)
 }
 
 
+void getADXL355AccelerometerData(int32_t *AccValue)
+{
+    if(adxl355_ReadAcc(&adxl355Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
+    {
+    
+      //float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
+      //float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
+      //float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
+      
+      //NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
+      //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
+      //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
+
+      //NRF_LOG_RAW_INFO("\n");
+      //NRF_LOG_FLUSH();
+    }
+}
+
 /**@brief Function for application main entry.
  */
 int main(void)
 {
     bool erase_bonds;
 
-        ret_code_t err_code;
-
+    ret_code_t err_code;
 
     // Initialize.
     log_init();
+    nrf_buddy_leds_init();
+
+    // Set ADXL355 to be in I2C mode
+    nrf_gpio_cfg_output(16);
+    nrf_gpio_pin_clear(16);
+
+    // Set ADXL355 to have address 0x1D    
+    nrf_gpio_cfg_output(12);
+    nrf_gpio_pin_clear(12);
+
 
     // Initialize the async SVCI interface to bootloader before any interrupts are enabled.
     
@@ -1089,33 +1061,24 @@ int main(void)
     APP_ERROR_CHECK(err_code);
     //*/
 
-    nrf_delay_ms(1000); // give some delay
-
-    
+    nrf_delay_ms(100); // give some delay
 
     // Start execution.
     NRF_LOG_INFO("Trailer Leveler Started.");
+    NRF_LOG_INFO("Initilising Firmware..."); // if it failed to initialize then print a message
     NRF_LOG_FLUSH();
-   
-
-    bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS); // initialize the leds and buttons
 
     twi_master_init(); // initialize the twi 
 
-    NRF_LOG_INFO("MPU6050 Initilising Firmware..."); // if it failed to initialize then print a message
-    NRF_LOG_FLUSH();
-
-
-    while(mpu6050_init(&mpu6050Sensor, &m_twi) == false &&
-          adxl355_init(&adxl355Sensor, &m_twi) == false) 
+    while(adxl355_init(&adxl355Sensor, &m_twi) == false &&
+          mpu6050_init(&mpu6050Sensor, &m_twi) == false) 
     {
-      NRF_LOG_INFO("Failed to initialise...retrying"); // if it failed to initialize then print a message
-      nrf_delay_ms(1000);
+      NRF_LOG_INFO("Failed to initialise an IMU...retrying"); // if it failed to initialize then print a message
+      nrf_delay_ms(200);
       NRF_LOG_FLUSH();
     }
 
     NRF_LOG_INFO("Found Sensor"); // if it failed to initialize then print a message
-    nrf_delay_ms(1000);
     NRF_LOG_FLUSH();
 
     if (mpu6050Sensor.initialised)
@@ -1138,10 +1101,9 @@ int main(void)
       NRF_LOG_INFO("ADXL355 setup complete");
     }
 
-    NRF_LOG_FLUSH();
-    
+    NRF_LOG_FLUSH(); 
+
     timers_init();
-    buttons_leds_init(&erase_bonds);
     power_management_init();
     ble_stack_init();
     gap_params_init();
@@ -1150,14 +1112,10 @@ int main(void)
     advertising_init();
     conn_params_init();
     peer_manager_init();
-
-   application_timers_start();
-
+    application_timers_start();
     advertising_start(erase_bonds);
 
     NRF_LOG_INFO("Bluetooth setup complete");
-    
-     
     NRF_LOG_FLUSH();
 
     // Enter main loop.
@@ -1165,10 +1123,7 @@ int main(void)
     {
         idle_state_handle();
     }
-
-    
 }
-
 
 /**
  * @}
