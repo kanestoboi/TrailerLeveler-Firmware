@@ -343,7 +343,7 @@ static void notification_timeout_handler(void * p_context)
         NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
       }
     }
-    else*/ if (adxl355Sensor.initialised)
+    else if (adxl355Sensor.initialised)
     {
       static int32_t AccValue[3];
       getADXL355AccelerometerData(AccValue);
