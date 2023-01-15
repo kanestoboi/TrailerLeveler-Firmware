@@ -59,6 +59,10 @@
           </folder>
           <file file_name="Components/Accelerometers/Accelerometers.h" />
         </folder>
+        <folder Name="LED">
+          <file file_name="Components/LED/nrf_buddy_led.c" />
+          <file file_name="Components/LED/nrf_buddy_led.h" />
+        </folder>
       </folder>
       <folder
         Name="Services"
@@ -66,7 +70,7 @@
         filter="*.*"
         path="Services"
         recurse="No" />
-      <file file_name="../../../main.c" />
+      <file file_name="main.c" />
       <file file_name="sdk_config.h" />
     </folder>
     <folder Name="Board Definition">
