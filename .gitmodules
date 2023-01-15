@@ -4,3 +4,6 @@
 [submodule "Components/Accelerometers/MPU6050"]
 	path = Components/Accelerometers/MPU6050
 	url = https://github.com/kanestoboi/nRF5_MPU6050.git
+[submodule "Components/LED"]
+	path = Components/LED
+	url = https://github.com/kanestoboi/nRF5-nRF52BuddyLED.git
