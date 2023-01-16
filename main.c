@@ -71,7 +71,6 @@
 #include "fds.h"
 #include "peer_manager.h"
 #include "peer_manager_handler.h"
-#include "bsp_btn_ble.h"
 #include "sensorsim.h"
 #include "ble_conn_state.h"
 #include "nrf_ble_gatt.h"
@@ -677,16 +676,21 @@ static void sleep_mode_enter(void)
 {
     ret_code_t err_code;
 
+    NRF_LOG_INFO("Preparing for sleep!");
+    NRF_LOG_FLUSH();
+
     err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_IDLE);
     APP_ERROR_CHECK(err_code);
 
     // Prepare wakeup buttons.
-    err_code = bsp_btn_ble_sleep_mode_prepare();
-    APP_ERROR_CHECK(err_code);
+    //err_code = bsp_btn_ble_sleep_mode_prepare();
+    //APP_ERROR_CHECK(err_code);
 
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
     err_code = sd_power_system_off();
     APP_ERROR_CHECK(err_code);
+
+    NRF_LOG_INFO("This should not be printed!");
 }
 
 
@@ -709,6 +713,8 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
             break;
 
         case BLE_ADV_EVT_IDLE:
+            NRF_LOG_INFO("Sleeping on event.");
+            NRF_LOG_FLUSH();
             sleep_mode_enter();
             break;
 
@@ -858,6 +864,7 @@ static void delete_bonds(void)
  *
  * @param[in]   event   Event generated when button is pressed.
  */
+ /*
 static void bsp_event_handler(bsp_event_t event)
 {
     ret_code_t err_code;
@@ -891,7 +898,7 @@ static void bsp_event_handler(bsp_event_t event)
         default:
             break;
     }
-}
+}*/
 
 
 /**@brief Function for initializing the Advertising functionality.
@@ -1044,7 +1051,7 @@ int main(void)
 
     // Initialize.
     log_init();
-    nrf_buddy_leds_init();
+    
 
     // Set ADXL355 to be in I2C mode
     nrf_gpio_cfg_output(16);
@@ -1104,6 +1111,7 @@ int main(void)
     NRF_LOG_FLUSH(); 
 
     timers_init();
+    nrf_buddy_leds_init();
     power_management_init();
     ble_stack_init();
     gap_params_init();
