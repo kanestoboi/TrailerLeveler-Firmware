@@ -997,6 +997,16 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
           mpu6050Sensor.mTransferDone = true;
           adxl355Sensor.mTransferDone = true;
           break;
+
+        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+          mpu6050Sensor.mTransferDone = true;
+          adxl355Sensor.mTransferDone = true;
+          break;
+
+        case NRF_DRV_TWI_EVT_DATA_NACK:
+          mpu6050Sensor.mTransferDone = true;
+          adxl355Sensor.mTransferDone = true;
+          break;
         
         default:
           // do nothing
@@ -1112,7 +1122,6 @@ int main(void)
 
       NRF_LOG_INFO("ADXL355 setup complete");
     }
-
     NRF_LOG_FLUSH(); 
 
     timers_init();
