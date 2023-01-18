@@ -679,6 +679,11 @@ static void sleep_mode_enter(void)
     NRF_LOG_INFO("Preparing for sleep!");
     NRF_LOG_FLUSH();
 
+    if (adxl355Sensor.initialised)
+    {
+      adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_STANDBY);
+    }
+
     err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_IDLE);
     APP_ERROR_CHECK(err_code);
 
