@@ -7,3 +7,6 @@
 [submodule "Components/LED"]
 	path = Components/LED
 	url = https://github.com/kanestoboi/nRF5-nRF52BuddyLED.git
+[submodule "Components/FuelGauge/MAX17260"]
+	path = Components/FuelGauge/MAX17260
+	url = https://github.com/kanestoboi/nRF5-MAX17260.git
