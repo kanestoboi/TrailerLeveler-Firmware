@@ -137,8 +137,10 @@ APP_TIMER_DEF(m_notification_timer_id);
 #define TWI_INSTANCE_ID     0
 
 //I2C Pins Settings, you change them to any other pins
-#define TWI_SCL_M           13         //I2C SCL Pin
-#define TWI_SDA_M           14         //I2C SDA Pin
+//#define TWI_SCL_M           13         //I2C SCL Pin
+//#define TWI_SDA_M           14         //I2C SDA Pin
+#define TWI_SCL_M           19         //I2C SCL Pin
+#define TWI_SDA_M           17         //I2C SDA Pin
 
 // Create a Handle for the twi communication
 const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
