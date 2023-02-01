@@ -4,7 +4,7 @@
 @Echo Off
 echo Creating Trailer Leveler Firmware Image
 
-set build-configuration=Debug
+set build-configuration=Release
 set application-hex=../Output/%build-configuration%/Exe/TrailerLeveler.hex
 set soft-device-hex=../../nRF5_SDK_Current/components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex
 set bootloader-hex=../../TrailerLeveler-Bootloader/Output/Release/Exe/TrailerLevelerSecureBootloader_s140_pca10056.hex
