@@ -563,13 +563,14 @@ static void services_init(void)
     //*/
 
     // Initialize the DFU service
-    
+    #ifndef DEBUG
     ble_dfu_buttonless_init_t dfus_init =
     {
         .evt_handler = ble_dfu_buttonless_evt_handler
     };
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
+    #endif
     //*/
     
 
@@ -1078,9 +1079,10 @@ int main(void)
 
 
     // Initialize the async SVCI interface to bootloader before any interrupts are enabled.
-    
+    #ifndef DEBUG
     err_code = ble_dfu_buttonless_async_svci_init();
     APP_ERROR_CHECK(err_code);
+    #endif
     //*/
 
     nrf_delay_ms(100); // give some delay

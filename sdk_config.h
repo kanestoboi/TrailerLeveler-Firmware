@@ -7699,7 +7699,11 @@
 // <e> NRF_LOG_BACKEND_RTT_ENABLED - nrf_log_backend_rtt - Log RTT backend
 //==========================================================
 #ifndef NRF_LOG_BACKEND_RTT_ENABLED
+#ifdef DEBUG
 #define NRF_LOG_BACKEND_RTT_ENABLED 1
+#else
+#define NRF_LOG_BACKEND_RTT_ENABLED 0
+#endif
 #endif
 // <o> NRF_LOG_BACKEND_RTT_TEMP_BUFFER_SIZE - Size of buffer for partially processed strings. 
 // <i> Size of the buffer is a trade-off between RAM usage and processing.
@@ -7777,7 +7781,11 @@
 // <e> NRF_LOG_ENABLED - nrf_log - Logger
 //==========================================================
 #ifndef NRF_LOG_ENABLED
+#ifdef DEBUG
 #define NRF_LOG_ENABLED 1
+#else
+#define NRF_LOG_ENABLED 0
+#endif
 #endif
 // <h> Log message pool - Configuration of log message pool
 
