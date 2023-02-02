@@ -330,11 +330,11 @@ static void notification_timeout_handler(void * p_context)
 
           //if (sendAccelData)
           //{
-            static int16_t sendVal[3];
-            sendVal[2] = AccValue[0] << 8 | AccValue[0] >> 8;
-            sendVal[1] = AccValue[1] << 8 | AccValue[1] >> 8;
-            sendVal[0] = AccValue[2] << 8 | AccValue[2] >> 8;
-            uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)sendVal, (uint8_t)6);
+            //static int16_t sendVal[3];
+            //sendVal[2] = AccValue[0] << 8 | AccValue[0] >> 8;
+            //sendVal[1] = 0;//AccValue[1] << 8 | AccValue[1] >> 8;
+            //sendVal[0] = 0; //AccValue[2] << 8 | AccValue[2] >> 8;
+            uint32_t err_code = ble_accelerometer_custom_value_update(&m_accelerometer, (uint8_t*)AccValue, (uint8_t)6);
             APP_ERROR_CHECK(err_code);
           //}
         
