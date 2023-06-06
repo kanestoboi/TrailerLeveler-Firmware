@@ -1,6 +1,6 @@
 
 @Echo Off
-set build-configuration=Debug
+set build-configuration=Release
 set /A version=2
 
 
