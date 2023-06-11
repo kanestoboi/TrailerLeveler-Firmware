@@ -32,11 +32,10 @@
 #define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID    0x1402
 
 #define BLE_ACCELEROMETER_DEF(_name)                          \
-static ble_accelerometer_service_t _name;                     \
+ble_accelerometer_service_t _name;                     \
 NRF_SDH_BLE_OBSERVER(_name ## _obs,                           \
                      BLE_HRS_BLE_OBSERVER_PRIO,               \
                      ble_accelerometer_on_ble_evt, &_name)
-
 
 
 // Forward declaration of the ble_accerometer_service_t type.
@@ -125,6 +124,6 @@ void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service,
 
 uint32_t ble_accelerometer_service_value_set(uint8_t *custom_value, uint8_t custom_value_length);
 
-BLE_ACCELEROMETER_DEF(m_accelerometer);
+extern ble_accelerometer_service_t m_accelerometer;
 
 #endif /* ACCELEROMETER_SERVICE_H */

@@ -101,7 +101,7 @@ NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
 {
     .handler = buttonless_dfu_sdh_state_observer,
 };
-
+BLE_ACCELEROMETER_DEF(m_accelerometer);
 
 /**@brief Register application shutdown handler with priority 0.
  */
@@ -312,12 +312,6 @@ static void services_init(void)
 
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
-
-    bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
-
-    /*	
-    
-    //*/
 
     // Initialize the DFU service
     #ifndef DEBUG

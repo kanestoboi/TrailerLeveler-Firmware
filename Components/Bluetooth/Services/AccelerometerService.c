@@ -5,6 +5,7 @@
 #include "nrf_gpio.h"
 #include "boards.h"
 #include "nrf_log.h"
+
 static uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 
 /**@brief   Macro for defining a ble_accelerometer instance.
@@ -242,7 +243,6 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
 uint32_t err_codess;
 uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
 {
-    //p_accelerometer_service = &m_accelerometer;
     if (p_accelerometer_service == NULL)
     {
         return NRF_ERROR_NULL;
