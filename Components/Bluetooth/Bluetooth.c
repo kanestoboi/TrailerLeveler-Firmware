@@ -46,7 +46,7 @@
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_DURATION                00                                      /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -457,16 +457,12 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected.");
-            //err_code = app_timer_stop(m_notification_timer_id);
-            //APP_ERROR_CHECK(err_code);
-            //sendAccelData = false;
-            // LED indication will be changed when advertising starts.
+
             break;
 
         case BLE_GAP_EVT_CONNECTED:
             NRF_LOG_INFO("Connected.");
             nrf_buddy_led_indication(NRF_BUDDY_INDICATE_CONNECTED);
-            //APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);

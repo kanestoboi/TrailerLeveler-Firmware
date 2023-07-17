@@ -122,8 +122,12 @@ static void notification_timeout_handler(void * p_context)
         static int32_t AccValue[3];
         if(adxl355_ReadAcc(&adxl355Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
-            uint32_t err_code = ble_accelerometer_service_value_update(&m_accelerometer, (uint8_t*)AccValue, (uint8_t)12);
-            APP_ERROR_CHECK(err_code);
+            /*
+             * This error code returned from ble_accelerometer_service_value_set 
+             * will not be NRF_SUCCESS if there is no ble device
+             * connected to the trailer leveler. The error code is not used.
+            */
+            ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)12);
         }
     }
     /*
@@ -228,7 +232,13 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
     {
               //If data transmission or receiving is finished
       	case NRF_DRV_TWI_EVT_DONE:
+            switch (p_event->xfer_desc.address)
+            {
+                case MPU6050_ADDRESS:
           mpu6050Sensor.mTransferDone = true;
+                    break;
+                    
+                case ADXL355_ADDRESS:
           adxl355Sensor.mTransferDone = true;
           break;
 
@@ -349,7 +359,7 @@ int main(void)
         (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_GYRO_CONFIG_REG , 0x18); 
         (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG,0x00);
 
-        //bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
+        bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
 
         NRF_LOG_INFO("MPU6050 setup complete");
     }
@@ -370,6 +380,9 @@ int main(void)
     APP_ERROR_CHECK(err_code);
 
     NRF_LOG_INFO("Timers started");
+
+    // Keeping this LED on as a visual indicator that the accelerometer has been found        
+    nrf_buddy_led_on(3);
 
         // Enter main loop.
     for (;;)
