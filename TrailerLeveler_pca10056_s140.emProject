@@ -59,17 +59,25 @@
           </folder>
           <file file_name="Components/Accelerometers/Accelerometers.h" />
         </folder>
+        <folder Name="Bluetooth">
+          <folder Name="Services">
+            <file file_name="Components/Bluetooth/Services/AccelerometerService.c" />
+            <file file_name="Components/Bluetooth/Services/AccelerometerService.h" />
+          </folder>
+          <file file_name="Components/Bluetooth/Bluetooth.c" />
+          <file file_name="Components/Bluetooth/Bluetooth.h" />
+        </folder>
+        <folder Name="FuelGauge">
+          <folder Name="MAX17260">
+            <file file_name="Components/FuelGauge/MAX17260/max17260.c" />
+            <file file_name="Components/FuelGauge/MAX17260/max17260.h" />
+          </folder>
+        </folder>
         <folder Name="LED">
           <file file_name="Components/LED/nrf_buddy_led.c" />
           <file file_name="Components/LED/nrf_buddy_led.h" />
         </folder>
       </folder>
-      <folder
-        Name="Services"
-        exclude=""
-        filter="*.*"
-        path="Services"
-        recurse="No" />
       <file file_name="main.c" />
       <file file_name="sdk_config.h" />
     </folder>

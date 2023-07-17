@@ -23,19 +23,16 @@
 #include "ble_srv_common.h"
 #include "nrf_sdh_ble.h"
 
-#include "../Components/Accelerometers/Accelerometers.h"
-
-
+#include "../../Accelerometers/Accelerometers.h"
 
 #define ACCELEROMETER_SERVICE_UUID_BASE {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0xEB, 0xA1, 0xED, 0x11, 0xD9, 0x7D, 0x02, 0xF7, 0x49, 0x76}
-
 
 #define ACCELEROMETER_SERVICE_UUID               0x1400
 #define ACCELEROMETER_ADXL355_VALUE_CHAR_UUID    0x1401
 #define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID    0x1402
 
 #define BLE_ACCELEROMETER_DEF(_name)                          \
-static ble_accelerometer_service_t _name;                     \
+ble_accelerometer_service_t _name;                     \
 NRF_SDH_BLE_OBSERVER(_name ## _obs,                           \
                      BLE_HRS_BLE_OBSERVER_PRIO,               \
                      ble_accelerometer_on_ble_evt, &_name)
@@ -80,6 +77,7 @@ struct ble_accerometer_service_s
     uint8_t                       uuid_type; 
 };
 
+
 /**@brief Function for initializing the Custom Service.
  *
  * @param[out]  p_cus       Custom Service structure. This structure will have to be supplied by
@@ -90,8 +88,6 @@ struct ble_accerometer_service_s
  * @return      NRF_SUCCESS on successful initialization of service, otherwise an error code.
  */
 uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
-
-uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 
 /**@brief Function for handling the Application's BLE Stack events.
  *
@@ -122,8 +118,12 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
  *
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
+uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
-uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
+void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service, ble_accelerometer_evt_t * p_evt);
 
+uint32_t ble_accelerometer_service_value_set(uint8_t *custom_value, uint8_t custom_value_length);
+
+extern ble_accelerometer_service_t m_accelerometer;
 
 #endif /* ACCELEROMETER_SERVICE_H */

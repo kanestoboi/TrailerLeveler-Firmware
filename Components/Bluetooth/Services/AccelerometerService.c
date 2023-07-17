@@ -6,6 +6,7 @@
 #include "boards.h"
 #include "nrf_log.h"
 
+static uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 
 /**@brief   Macro for defining a ble_accelerometer instance.
  *
@@ -66,7 +67,7 @@ uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerome
 
     memset(&cccd_md, 0, sizeof(cccd_md));
 
-    //  Read  operation on Cccd should be possible without authentication.
+    // Read  operation on Cccd should be possible without authentication.
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
     
@@ -102,7 +103,6 @@ uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerome
     {
       ble_uuid.uuid = ACCELEROMETER_MPU6050_VALUE_CHAR_UUID;
     }
-
 
     memset(&attr_char_value, 0, sizeof(attr_char_value));
 
@@ -175,6 +175,12 @@ static void on_connect(ble_accelerometer_service_t * p_accelerometer_service, bl
     ble_accelerometer_evt_t evt;
 
     evt.evt_type = BLE_ACCELEROMETER_EVT_CONNECTED;
+    
+    // check if the accelerometer service ble event handler has been initialised before calling it
+    if (p_accelerometer_service->evt_handler == NULL)
+    {
+        return;
+    }
 
     p_accelerometer_service->evt_handler(p_accelerometer_service, &evt);
 }
@@ -206,7 +212,6 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
     {
         // Put specific task here. 
         NRF_LOG_INFO("Message Received.");
-        nrf_gpio_pin_toggle(LED_4);
     }
 
     // Check if the Custom value CCCD is written to and that the value is the appropriate length, i.e 2 bytes.
@@ -233,10 +238,10 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         }
 
     }
-}
+};
 
-
-uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
+uint32_t err_codess;
+uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
 {
     if (p_accelerometer_service == NULL)
     {
@@ -254,12 +259,12 @@ uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_a
     gatts_value.p_value = custom_value;
 
     // Update database.
-    err_code = sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+    err_codess= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
                                         p_accelerometer_service->accerometer_value_handles.value_handle,
                                         &gatts_value);
-    if (err_code != NRF_SUCCESS)
+    if (err_codess != NRF_SUCCESS)
     {
-        return err_code;
+        return err_codess;
     }
 
     // Send value if connected and notifying.
@@ -283,4 +288,41 @@ uint32_t ble_accelerometer_custom_value_update(ble_accelerometer_service_t * p_a
     }
 
     return err_code;
+}
+
+/**@brief Function for handling the Custom Service Service events.
+ *
+ * @details This function will be called for all Custom Service events which are passed to
+ *          the application.
+ *
+ * @param[in]   p_cus_service  Custom Service structure.
+ * @param[in]   p_evt          Event received from the Custom Service.
+ *
+ */
+void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service, ble_accelerometer_evt_t * p_evt)
+{
+    ret_code_t err_code;
+    switch(p_evt->evt_type)
+    {
+        case BLE_ACCELEROMETER_EVT_NOTIFICATION_ENABLED:
+            break;
+
+        case BLE_ACCELEROMETER_EVT_NOTIFICATION_DISABLED:      
+            break;
+
+        case BLE_ACCELEROMETER_EVT_CONNECTED:
+            break;
+
+        case BLE_ACCELEROMETER_EVT_DISCONNECTED:
+              break;
+
+        default:
+              // No implementation needed.
+              break;
+    }
+}
+
+uint32_t ble_accelerometer_service_value_set(uint8_t *custom_value, uint8_t custom_value_length)
+{
+    ble_accelerometer_service_value_update(&m_accelerometer, custom_value, custom_value_length); 
 }
