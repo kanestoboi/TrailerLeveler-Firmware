@@ -324,5 +324,5 @@ void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service,
 
 uint32_t ble_accelerometer_service_value_set(uint8_t *custom_value, uint8_t custom_value_length)
 {
-    ble_accelerometer_service_value_update(&m_accelerometer, custom_value, custom_value_length); 
+    return ble_accelerometer_service_value_update(&m_accelerometer, custom_value, custom_value_length); 
 }
