@@ -281,24 +281,6 @@ void twi_master_init(void)
     nrf_drv_twi_enable(&m_twi);
 }
 
-void getADXL355AccelerometerData(int32_t *AccValue)
-{
-    if(adxl355_ReadAcc(&adxl355Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
-    {
-    
-      //float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
-      //float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
-      //float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
-      
-      //NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
-      //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
-      //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
-
-      //NRF_LOG_RAW_INFO("\n");
-      //NRF_LOG_FLUSH();
-    }
-}
-
 /**@brief Function for application main entry.
  */
 int main(void)
