@@ -4,4 +4,5 @@ Output/
 *.jlink
 dfu_images/bl_sd_settings_app.hex
 dfu_images/bl_settings.hex
+dfu_images/trailer_leveler_application*.zip
 TrailerLeveler_pca10056_s140.emSession

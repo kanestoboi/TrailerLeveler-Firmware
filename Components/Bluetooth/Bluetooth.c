@@ -46,7 +46,7 @@
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                00                                      /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
+#define APP_ADV_DURATION                500                                      /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -407,8 +407,21 @@ static void sleep_mode_enter(void)
 
     NRF_LOG_INFO("Powering system off!");
     NRF_LOG_FLUSH();
-    err_code = sd_power_system_off();
+
+    // Enable wakeup from pin P0.14
+    nrf_gpio_cfg_sense_input(14, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+
+#ifdef DEBUG_NRF
+    (void) sd_power_system_off();
+    NRF_LOG_INFO("Powered off");
     APP_ERROR_CHECK(err_code);
+    while(1);
+#else
+    err_code = sd_power_system_off();
+    NRF_LOG_INFO("Powered off");
+    nrf_buddy_led_on(3);
+    APP_ERROR_CHECK(err_code);
+#endif
 
     NRF_LOG_INFO("This should not be printed!");
 }
@@ -604,15 +617,6 @@ static void advertising_init(void)
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 }
 
-
-/**@brief Function for initializing power management.
- */
-static void power_management_init(void)
-{
-    ret_code_t err_code;
-    err_code = nrf_pwr_mgmt_init();
-    APP_ERROR_CHECK(err_code);
-}
 
 
 /**@brief Function for handling the idle state (main loop).
