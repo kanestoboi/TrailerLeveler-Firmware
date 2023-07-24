@@ -234,28 +234,28 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
-          mpu6050Sensor.mTransferDone = true;
+                    mpu6050Sensor.mTransferDone = true;
                     break;
-                    
+
                 case ADXL355_ADDRESS:
-          adxl355Sensor.mTransferDone = true;
-          break;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
 
-        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
-          mpu6050Sensor.mTransferDone = true;
-          adxl355Sensor.mTransferDone = true;
-          break;
+                case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+                    mpu6050Sensor.mTransferDone = true;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
 
-        case NRF_DRV_TWI_EVT_DATA_NACK:
-          mpu6050Sensor.mTransferDone = true;
-          adxl355Sensor.mTransferDone = true;
-          break;
-        
-        default:
-          // do nothing
-          break;
+                case NRF_DRV_TWI_EVT_DATA_NACK:
+                    mpu6050Sensor.mTransferDone = true;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
+
+                default:
+                    // do nothing
+                    break;
+            }
     }
-}
 }
 
 
