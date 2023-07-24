@@ -256,6 +256,8 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
           break;
     }
 }
+}
+
 
 //Initialize the TWI as Master device
 void twi_master_init(void)
@@ -348,7 +350,7 @@ int main(void)
     {
         adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
         adxl355_setFilterSettings(&adxl355Sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
-        adxl_setRange(&adxl355Sensor, ADXL_RANGE_2G);
+        adxl355_setRange(&adxl355Sensor, ADXL_RANGE_2G);
 
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
         NRF_LOG_INFO("ADXL355 setup complete");
