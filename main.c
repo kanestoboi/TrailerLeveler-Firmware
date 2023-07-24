@@ -61,7 +61,6 @@ const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
 
-void getADXL355AccelerometerData(int32_t *AccValue);
 
 
 /**@brief Function for handling the Battery measurement timer timeout.
