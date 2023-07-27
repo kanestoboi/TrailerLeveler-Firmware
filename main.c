@@ -61,7 +61,6 @@ const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
 
-void getADXL355AccelerometerData(int32_t *AccValue);
 
 
 /**@brief Function for handling the Battery measurement timer timeout.
@@ -235,28 +234,30 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
-          mpu6050Sensor.mTransferDone = true;
+                    mpu6050Sensor.mTransferDone = true;
                     break;
-                    
+
                 case ADXL355_ADDRESS:
-          adxl355Sensor.mTransferDone = true;
-          break;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
 
-        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
-          mpu6050Sensor.mTransferDone = true;
-          adxl355Sensor.mTransferDone = true;
-          break;
+                case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+                    mpu6050Sensor.mTransferDone = true;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
 
-        case NRF_DRV_TWI_EVT_DATA_NACK:
-          mpu6050Sensor.mTransferDone = true;
-          adxl355Sensor.mTransferDone = true;
-          break;
-        
-        default:
-          // do nothing
-          break;
+                case NRF_DRV_TWI_EVT_DATA_NACK:
+                    mpu6050Sensor.mTransferDone = true;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
+
+                default:
+                    // do nothing
+                    break;
+            }
     }
 }
+
 
 //Initialize the TWI as Master device
 void twi_master_init(void)
@@ -279,24 +280,6 @@ void twi_master_init(void)
     
     //Enable the TWI Communication
     nrf_drv_twi_enable(&m_twi);
-}
-
-void getADXL355AccelerometerData(int32_t *AccValue)
-{
-    if(adxl355_ReadAcc(&adxl355Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
-    {
-    
-      //float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
-      //float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
-      //float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
-      
-      //NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
-      //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
-      //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
-
-      //NRF_LOG_RAW_INFO("\n");
-      //NRF_LOG_FLUSH();
-    }
 }
 
 /**@brief Function for application main entry.
@@ -367,7 +350,7 @@ int main(void)
     {
         adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
         adxl355_setFilterSettings(&adxl355Sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
-        adxl_setRange(&adxl355Sensor, ADXL_RANGE_2G);
+        adxl355_setRange(&adxl355Sensor, ADXL_RANGE_2G);
 
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
         NRF_LOG_INFO("ADXL355 setup complete");
