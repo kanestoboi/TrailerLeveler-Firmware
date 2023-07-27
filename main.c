@@ -61,7 +61,6 @@ const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
 
-void getADXL355AccelerometerData(int32_t *AccValue);
 
 
 /**@brief Function for handling the Battery measurement timer timeout.
@@ -235,28 +234,30 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
-          mpu6050Sensor.mTransferDone = true;
+                    mpu6050Sensor.mTransferDone = true;
                     break;
-                    
+
                 case ADXL355_ADDRESS:
-          adxl355Sensor.mTransferDone = true;
-          break;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
 
-        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
-          mpu6050Sensor.mTransferDone = true;
-          adxl355Sensor.mTransferDone = true;
-          break;
+                case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+                    mpu6050Sensor.mTransferDone = true;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
 
-        case NRF_DRV_TWI_EVT_DATA_NACK:
-          mpu6050Sensor.mTransferDone = true;
-          adxl355Sensor.mTransferDone = true;
-          break;
-        
-        default:
-          // do nothing
-          break;
+                case NRF_DRV_TWI_EVT_DATA_NACK:
+                    mpu6050Sensor.mTransferDone = true;
+                    adxl355Sensor.mTransferDone = true;
+                    break;
+
+                default:
+                    // do nothing
+                    break;
+            }
     }
 }
+
 
 //Initialize the TWI as Master device
 void twi_master_init(void)
@@ -349,7 +350,7 @@ int main(void)
     {
         adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
         adxl355_setFilterSettings(&adxl355Sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
-        adxl_setRange(&adxl355Sensor, ADXL_RANGE_2G);
+        adxl355_setRange(&adxl355Sensor, ADXL_RANGE_2G);
 
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
         NRF_LOG_INFO("ADXL355 setup complete");
