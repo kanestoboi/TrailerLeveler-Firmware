@@ -28,7 +28,6 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
 #include "Services/AccelerometerService.h"
@@ -46,7 +45,7 @@
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                00                                      /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
+#define APP_ADV_DURATION                500                                      /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -380,52 +379,6 @@ static void conn_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for putting the chip into sleep mode.
- *
- * @note This function will not return.
- */
-static void sleep_mode_enter(void)
-{
-    ret_code_t err_code;
-
-    NRF_LOG_INFO("Preparing for sleep!");
-    NRF_LOG_FLUSH();
-
-    //if (adxl355Sensor.initialised)
-    //{
-    //  adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_STANDBY);
-    //}
-
-    err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
-
-    // Prepare wakeup buttons.
-    //err_code = bsp_btn_ble_sleep_mode_prepare();
-    //APP_ERROR_CHECK(err_code);
-
-    // Go to system-off mode (this function will not return; wakeup will cause a reset).
-
-    NRF_LOG_INFO("Powering system off!");
-    NRF_LOG_FLUSH();
-
-    // Enable wakeup from pin P0.14
-    nrf_gpio_cfg_sense_input(14, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-
-#ifdef DEBUG_NRF
-    (void) sd_power_system_off();
-    NRF_LOG_INFO("Powered off");
-    APP_ERROR_CHECK(err_code);
-    while(1);
-#else
-    err_code = sd_power_system_off();
-    NRF_LOG_INFO("Powered off");
-    nrf_buddy_led_on(3);
-    APP_ERROR_CHECK(err_code);
-#endif
-
-    NRF_LOG_INFO("This should not be printed!");
-}
-
 
 /**@brief Function for handling advertising events.
  *
@@ -448,7 +401,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
         case BLE_ADV_EVT_IDLE:
             NRF_LOG_INFO("Sleeping on event.");
             NRF_LOG_FLUSH();
-            sleep_mode_enter();
+            bluetooth_advertising_timeout_callback();
             break;
 
         default:

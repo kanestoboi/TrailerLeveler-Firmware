@@ -1,47 +1,29 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 #include "nordic_common.h"
 #include "nrf.h"
 #include "app_error.h"
-#include "ble.h"
-#include "ble_hci.h"
-#include "ble_srv_common.h"
-#include "ble_advdata.h"
-#include "ble_advertising.h"
-#include "ble_conn_params.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
 #include "app_timer.h"
-#include "fds.h"
-#include "peer_manager.h"
-#include "peer_manager_handler.h"
-#include "sensorsim.h"
-#include "ble_conn_state.h"
-#include "nrf_ble_gatt.h"
-#include "nrf_ble_qwr.h"
 #include "nrf_pwr_mgmt.h"
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_delay.h"
+#include "nrf_drv_twi.h"
 
 #include "Components/Accelerometers/ADXL355/adxl355.h"
 #include "Components/Accelerometers/MPU6050/mpu6050.h"
 #include "Components/Accelerometers/Accelerometers.h"
 #include "Components/FuelGauge/MAX17260/max17260.h"
-
-#include "nrf_drv_twi.h"
-
 #include "Components/LED/nrf_buddy_led.h"
 #include "Components/Bluetooth/Bluetooth.h"
-
 #include "Components/Bluetooth/Services/AccelerometerService.h"
-
-#include "math.h"
 
 APP_TIMER_DEF(m_notification_timer_id);
 
@@ -57,15 +39,13 @@ APP_TIMER_DEF(m_notification_timer_id);
 // Create a Handle for the twi communication
 const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 
-
 MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
 
 
-
-/**@brief Function for handling the Battery measurement timer timeout.
+/**@brief Function for handling the Accelerometer measurement timer timeout.
  *
- * @details This function will be called each time the battery level measurement timer expires.
+ * @details This function will be called each time the accelerometer level measurement timer expires.
  *
  * @param[in] p_context  Pointer used for passing some arbitrary information (context) from the
  *                       app_start_timer() call to the timeout handler.
@@ -84,36 +64,12 @@ static void notification_timeout_handler(void * p_context)
         static int16_t AccValue[3];
         if(mpu6050_ReadAcc(&mpu6050Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
-            
-            float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
-            float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
-            float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);
-
-
-            NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
-            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
-            NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
-
-
-            NRF_LOG_RAW_INFO("\n");
-
-            NRF_LOG_FLUSH();
-            //*/
-
-            //if (sendAccelData)
-            //{
-            //static int16_t sendVal[3];
-            //sendVal[2] = AccValue[0] << 8 | AccValue[0] >> 8;
-            //sendVal[1] = 0;//AccValue[1] << 8 | AccValue[1] >> 8;
-            //sendVal[0] = 0; //AccValue[2] << 8 | AccValue[2] >> 8;
-            uint32_t err_code = ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)6);
-            //APP_ERROR_CHECK(err_code);
-            //}
-        
+            uint32_t err_code = ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)6);      
         }
         else
         {
-            NRF_LOG_RAW_INFO("Reading ACC values Failed!!!"); // if reading was unsuccessful then let the user know about it
+            NRF_LOG_RAW_INFO("Reading ACC values Failed!!!\n"); // if reading was unsuccessful then let the user know about it
+            NRF_LOG_FLUSH();
         }
     }
     else if (adxl355Sensor.initialised)
@@ -153,54 +109,48 @@ static void timers_init(void)
     
     err_code = app_timer_create(&m_notification_timer_id, APP_TIMER_MODE_REPEATED, notification_timeout_handler);
     APP_ERROR_CHECK(err_code);
-
-    
 }
-
-
 
 /**@brief Function for putting the chip into sleep mode.
  *
  * @note This function will not return.
  */
-static void sleep_mode_enter(void)
+void bluetooth_advertising_timeout_callback(void)
 {
     ret_code_t err_code;
-
-    NRF_LOG_INFO("Preparing for sleep!");
-    NRF_LOG_FLUSH();
-
-    //if (adxl355Sensor.initialised)
-    //{
-    //  adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_STANDBY);
-    //}
 
     err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_IDLE);
     APP_ERROR_CHECK(err_code);
 
-    //app_timer_stop(m_notification_timer_id);
+    if (mpu6050Sensor.initialised)
+    {
+        // Enable wakeup from pin P0.31
+        nrf_gpio_cfg_sense_input(31, NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
 
-    // Wait for any ongoing transactions to complete
-    while (nrf_drv_twi_is_busy(&m_twi));
+        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x28); // Set MPU6050 cycle between sleep mode and wake up mode
+        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT2_REG , 0x00); // Sets the wake up period to be 1.25 Hz
 
-    // Disable the TWI interface
-    nrf_drv_twi_disable(&m_twi);
+        // Setup the wakeup interrupt on the MPU6050 
+        mpu6050_SetMotionDetectionThreshold(&mpu6050Sensor, 1);   
+        mpu6050_SetMotionDetectionDuration(&mpu6050Sensor, 0x01);
+        mpu6050_SetAccelerometerPowerOnDelay(&mpu6050Sensor, 1);
+        mpu6050_SetFreefallDetectionCounterDecrement(&mpu6050Sensor, 1);
+        mpu6050_SetMotionDetectionCounterDecrement(&mpu6050Sensor, 1);
+        mpu6050_EnableInterrupt(&mpu6050Sensor, MOT_EN); 
+    }
 
-    // Release any resources associated with the TWI interface
-    nrf_drv_twi_uninit(&m_twi);
-
-    // Prepare wakeup buttons.
-    //err_code = bsp_btn_ble_sleep_mode_prepare();
-    //APP_ERROR_CHECK(err_code);
-
+#ifdef DEBUG_NRF
+    // When in debug, this will put the device in a simulated sleep mode, still allowing the debugger to work
+    sd_power_system_off();
+    NRF_LOG_INFO("Powered off");
+    while(1);
+#else
     // Go to system-off mode (this function will not return; wakeup will cause a reset).
-
-    NRF_LOG_INFO("Powering system off!");
-    NRF_LOG_FLUSH();
     err_code = sd_power_system_off();
+    NRF_LOG_INFO("Powered off");
     APP_ERROR_CHECK(err_code);
+#endif
 
-    NRF_LOG_INFO("This should not be printed!");
 }
 
 /**@brief Function for initializing the nrf log module.
@@ -213,7 +163,6 @@ static void log_init(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
-
 /**@brief Function for initializing power management.
  */
 static void power_management_init(void)
@@ -223,7 +172,7 @@ static void power_management_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-//Event Handler
+//Event Handler for TWI events
 void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 {
     //Check the event to see what type of event occurred
@@ -231,6 +180,7 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
     {
               //If data transmission or receiving is finished
       	case NRF_DRV_TWI_EVT_DONE:
+            NRF_LOG_FLUSH();
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
@@ -241,13 +191,21 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
                     adxl355Sensor.mTransferDone = true;
                     break;
 
-                case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+                default:
+                    // do nothing
+                    break;
+            }
+            break;
+
+        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+            NRF_LOG_FLUSH();
+           switch (p_event->xfer_desc.address)
+            {
+                case MPU6050_ADDRESS:
                     mpu6050Sensor.mTransferDone = true;
-                    adxl355Sensor.mTransferDone = true;
                     break;
 
-                case NRF_DRV_TWI_EVT_DATA_NACK:
-                    mpu6050Sensor.mTransferDone = true;
+                case ADXL355_ADDRESS:
                     adxl355Sensor.mTransferDone = true;
                     break;
 
@@ -255,9 +213,28 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
                     // do nothing
                     break;
             }
+            break;
+
+        case NRF_DRV_TWI_EVT_DATA_NACK:
+        NRF_LOG_INFO("NACK DATA.");
+        NRF_LOG_FLUSH();
+            switch (p_event->xfer_desc.address)
+            {
+                case MPU6050_ADDRESS:
+                    mpu6050Sensor.mTransferDone = true;
+                    break;
+
+                case ADXL355_ADDRESS:
+                    adxl355Sensor.mTransferDone = true;
+                    break;
+
+                default:
+                    // do nothing
+                    break;
+            }
+            break;
     }
 }
-
 
 //Initialize the TWI as Master device
 void twi_master_init(void)
@@ -272,7 +249,6 @@ void twi_master_init(void)
        .interrupt_priority = APP_IRQ_PRIORITY_HIGH, //Interrupt Priority(Note: if using Bluetooth then select priority carefully)
        .clear_bus_init     = false //automatically clear bus
     };
-
 
     //A function to initialize the twi communication
     err_code = nrf_drv_twi_init(&m_twi, &twi_config, twi_handler, NULL);
@@ -301,10 +277,8 @@ int main(void)
     nrf_gpio_cfg_output(7);
     nrf_gpio_pin_clear(7);
 
-    // Set the charge state pin to be an imput    
-    nrf_gpio_cfg_input(41, GPIO_PIN_CNF_PULL_Pullup);
-
-    nrf_delay_ms(100); // give some delay
+    // Set the charge state pin to be an input    
+    nrf_gpio_cfg_input(41, GPIO_PIN_CNF_PULL_Disabled);
 
     // Start execution.
     NRF_LOG_INFO("Trailer Leveler Started.");
@@ -335,14 +309,13 @@ int main(void)
 
     if (mpu6050Sensor.initialised)
     {
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x00); 
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_SAMPLE_RATE_REG , 0x07); 
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06); 						
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_INT_EN_REG, 0x00); 
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_GYRO_CONFIG_REG , 0x18); 
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG,0x00);
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x00);   // Set accelerometer, gyro, and temperature sensor to be on
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_SAMPLE_RATE_REG , 0x07); // Set sample rate divider to be 7. Sample rate = 1,000 / (1+7) = 125 (Same sample may be received in FIFO twice)
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
+        mpu6050_EnableInterrupt(&mpu6050Sensor, DISABLE_ALL_INTERRUPTS);        // Disable Interrupts
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG, 0x04); // Configure the DHPF available in the path leading to motion detectors to 0.63Hz
 
-        bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
+        bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);      // Add accelerometer service to ble
 
         NRF_LOG_INFO("MPU6050 setup complete");
     }
@@ -357,17 +330,13 @@ int main(void)
     }
     NRF_LOG_FLUSH();
 
-    nrf_delay_ms(1000);
-    NRF_LOG_INFO("Starting timers");
     err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
     APP_ERROR_CHECK(err_code);
-
-    NRF_LOG_INFO("Timers started");
 
     // Keeping this LED on as a visual indicator that the accelerometer has been found        
     nrf_buddy_led_on(3);
 
-        // Enter main loop.
+    // Enter main loop.
     for (;;)
     {
         bluetooth_idle_state_handle();

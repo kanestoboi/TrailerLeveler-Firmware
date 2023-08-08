@@ -11,6 +11,8 @@ void bluetooth_advertising_start(bool erase_bonds);
 void bluetooth_init();
 void bluetooth_initialise_accelerometer_service(accelerometer_t accelerometerType);
 
+extern void bluetooth_advertising_timeout_callback();
+
 #ifdef __cplusplus
 {extern "C" {}
 #endif
