@@ -41,6 +41,7 @@ const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
 
 MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
+MAX17260 max17260Sensor;
 
 
 /**@brief Function for handling the Accelerometer measurement timer timeout.
@@ -85,6 +86,17 @@ static void notification_timeout_handler(void * p_context)
             ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)12);
         }
     }
+
+    max17260_getCellVoltage(&max17260Sensor, &voltage);
+
+
+    max17260_getCurrent(&max17260Sensor, &current);
+
+    max17260_getStateOfCharge(&max17260Sensor, &soc);
+
+    bluetooth_update_battery_level((uint8_t)roundf(soc));
+
+
     /*
       adxl355_ReadTemp(&sensor, &tempValue);
 
@@ -180,7 +192,6 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
     {
               //If data transmission or receiving is finished
       	case NRF_DRV_TWI_EVT_DONE:
-            NRF_LOG_FLUSH();
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
@@ -190,6 +201,10 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
                 case ADXL355_ADDRESS:
                     adxl355Sensor.mTransferDone = true;
                     break;
+                
+                case MAX17260_ADDRESS:
+                    max17260Sensor.mTransferDone = true;
+                    break;
 
                 default:
                     // do nothing
@@ -198,7 +213,6 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             break;
 
         case NRF_DRV_TWI_EVT_ADDRESS_NACK:
-            NRF_LOG_FLUSH();
            switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
@@ -209,6 +223,10 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
                     adxl355Sensor.mTransferDone = true;
                     break;
 
+                case MAX17260_ADDRESS:
+                    max17260Sensor.mTransferDone = true;
+                    break;
+
                 default:
                     // do nothing
                     break;
@@ -216,8 +234,6 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             break;
 
         case NRF_DRV_TWI_EVT_DATA_NACK:
-        NRF_LOG_INFO("NACK DATA.");
-        NRF_LOG_FLUSH();
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
@@ -226,6 +242,10 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
 
                 case ADXL355_ADDRESS:
                     adxl355Sensor.mTransferDone = true;
+                    break;
+
+                 case MAX17260_ADDRESS:
+                    max17260Sensor.mTransferDone = true;
                     break;
 
                 default:
@@ -294,6 +314,15 @@ int main(void)
     bluetooth_advertising_start(erase_bonds);
     NRF_LOG_INFO("Bluetooth setup complete");
     NRF_LOG_FLUSH();
+
+    if (max17260_init(&max17260Sensor, &m_twi))
+    {
+        NRF_LOG_INFO("MAX17260 Initialised");
+        
+        uint16_t val;
+        max17260_register_read(&max17260Sensor, 0x18, (uint8_t*)&val, 2);
+        NRF_LOG_INFO("Value: %X", val);
+    }
 
     // Try to find an accelerometer sensor on the TWI bus
     while(adxl355_init(&adxl355Sensor, &m_twi) == false &&
