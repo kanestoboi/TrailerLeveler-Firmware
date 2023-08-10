@@ -1,6 +1,3 @@
-
-
-
 @Echo Off
 echo Creating Trailer Leveler Firmware Image
 
