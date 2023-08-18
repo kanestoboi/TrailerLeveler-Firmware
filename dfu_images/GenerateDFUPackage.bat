@@ -1,5 +1,9 @@
 
-@Echo Off
+@Echo off
+echo Compiling Release
+emBuild -config "Release" -echo ../TrailerLeveler_pca10056_s140.emProject
+
+
 set build-configuration=Release
 set /A firmwareVersion=2
 set /A bootloaderVersion=1
