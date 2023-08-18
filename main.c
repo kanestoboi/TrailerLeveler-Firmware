@@ -140,7 +140,7 @@ void bluetooth_advertising_timeout_callback(void)
         nrf_gpio_cfg_sense_input(31, NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
 
         (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x28); // Set MPU6050 cycle between sleep mode and wake up mode
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT2_REG , 0x00); // Sets the wake up period to be 1.25 Hz
+        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT2_REG , 0x02); // Sets the wake up period to be 5 Hz
 
         // Setup the wakeup interrupt on the MPU6050 
         mpu6050_SetMotionDetectionThreshold(&mpu6050Sensor, 1);   
