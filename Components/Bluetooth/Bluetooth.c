@@ -12,6 +12,7 @@
 #include "ble_advdata.h"
 #include "ble_advertising.h"
 #include "ble_conn_params.h"
+#include "ble_bas.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
@@ -27,7 +28,6 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
-
 
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
@@ -46,7 +46,7 @@
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                00                                      /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
+#define APP_ADV_DURATION                18000                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -93,6 +93,7 @@ static void peer_manager_init(void);
 static void delete_bonds(void);
 static void advertising_init(void);
 
+BLE_BAS_DEF(m_bas);                                                     /**< Structure used to identify the battery service. */
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
@@ -306,11 +307,28 @@ static void services_init(void)
 {
     ret_code_t         err_code;
     nrf_ble_qwr_init_t qwr_init = {0};
+    ble_bas_init_t     bas_init;
 
     // Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
 
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
+    APP_ERROR_CHECK(err_code);
+
+    // Initialize Battery Service.
+    memset(&bas_init, 0, sizeof(bas_init));
+
+    // Here the sec level for the Battery Service can be changed/increased.
+    bas_init.bl_rd_sec        = SEC_OPEN;
+    bas_init.bl_cccd_wr_sec   = SEC_OPEN;
+    bas_init.bl_report_rd_sec = SEC_OPEN;
+
+    bas_init.evt_handler          = NULL;
+    bas_init.support_notification = true;
+    bas_init.p_report_ref         = NULL;
+    bas_init.initial_batt_level   = 100;
+
+    err_code = ble_bas_init(&m_bas, &bas_init);
     APP_ERROR_CHECK(err_code);
 
     // Initialize the DFU service
@@ -380,52 +398,6 @@ static void conn_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for putting the chip into sleep mode.
- *
- * @note This function will not return.
- */
-static void sleep_mode_enter(void)
-{
-    ret_code_t err_code;
-
-    NRF_LOG_INFO("Preparing for sleep!");
-    NRF_LOG_FLUSH();
-
-    //if (adxl355Sensor.initialised)
-    //{
-    //  adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_STANDBY);
-    //}
-
-    err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
-
-    // Prepare wakeup buttons.
-    //err_code = bsp_btn_ble_sleep_mode_prepare();
-    //APP_ERROR_CHECK(err_code);
-
-    // Go to system-off mode (this function will not return; wakeup will cause a reset).
-
-    NRF_LOG_INFO("Powering system off!");
-    NRF_LOG_FLUSH();
-
-    // Enable wakeup from pin P0.14
-    nrf_gpio_cfg_sense_input(14, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
-
-#ifdef DEBUG_NRF
-    (void) sd_power_system_off();
-    NRF_LOG_INFO("Powered off");
-    APP_ERROR_CHECK(err_code);
-    while(1);
-#else
-    err_code = sd_power_system_off();
-    NRF_LOG_INFO("Powered off");
-    nrf_buddy_led_on(3);
-    APP_ERROR_CHECK(err_code);
-#endif
-
-    NRF_LOG_INFO("This should not be printed!");
-}
-
 
 /**@brief Function for handling advertising events.
  *
@@ -448,7 +420,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
         case BLE_ADV_EVT_IDLE:
             NRF_LOG_INFO("Sleeping on event.");
             NRF_LOG_FLUSH();
-            sleep_mode_enter();
+            bluetooth_advertising_timeout_callback();
             break;
 
         default:
@@ -664,5 +636,18 @@ void bluetooth_initialise_accelerometer_service(accelerometer_t accelerometerTyp
     APP_ERROR_CHECK(err_code);
 }
 
+void bluetooth_update_battery_level(uint8_t batteryLevel)
+{
+    ret_code_t err_code;
+    err_code = ble_bas_battery_level_update(&m_bas, batteryLevel, BLE_CONN_HANDLE_ALL);
+    //if ((err_code != NRF_SUCCESS) &&
+    //    (err_code != NRF_ERROR_INVALID_STATE) &&
+    //    (err_code != NRF_ERROR_RESOURCES) &&
+    //    (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
+    //   )
+    //{
+    //    APP_ERROR_HANDLER(err_code);
+    //}
+}
 
 
