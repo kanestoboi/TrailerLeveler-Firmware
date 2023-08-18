@@ -87,10 +87,7 @@ static void notification_timeout_handler(void * p_context)
         }
     }
 
-    max17260_getCellVoltage(&max17260Sensor, &voltage);
-
-
-    max17260_getCurrent(&max17260Sensor, &current);
+    float soc;
 
     max17260_getStateOfCharge(&max17260Sensor, &soc);
 
