@@ -13,6 +13,7 @@
 #include "ble_advertising.h"
 #include "ble_conn_params.h"
 #include "ble_bas.h"
+#include "ble_dis.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
@@ -44,6 +45,7 @@
 
 #define DEVICE_NAME                     "Trailer Leveler"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
+#define FIRMWARE_REVISION_NUMBER        "v0.3.0"
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
 #define APP_ADV_DURATION                18000                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
@@ -330,6 +332,13 @@ static void services_init(void)
 
     err_code = ble_bas_init(&m_bas, &bas_init);
     APP_ERROR_CHECK(err_code);
+
+    ble_dis_init_t dis_init = {0};
+    ble_srv_ascii_to_utf8(&dis_init.fw_rev_str, FIRMWARE_REVISION_NUMBER);
+    dis_init.dis_char_rd_sec = SEC_OPEN;
+
+    APP_ERROR_CHECK(ble_dis_init(&dis_init));
+
 
     // Initialize the DFU service
     #ifndef DEBUG
