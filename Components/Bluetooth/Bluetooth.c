@@ -29,7 +29,7 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
-
+#include "nrf_dfu_settings.h"
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
 #include "Services/AccelerometerService.h"
@@ -333,12 +333,6 @@ static void services_init(void)
     err_code = ble_bas_init(&m_bas, &bas_init);
     APP_ERROR_CHECK(err_code);
 
-    ble_dis_init_t dis_init = {0};
-    ble_srv_ascii_to_utf8(&dis_init.fw_rev_str, FIRMWARE_REVISION_NUMBER);
-    dis_init.dis_char_rd_sec = SEC_OPEN;
-
-    APP_ERROR_CHECK(ble_dis_init(&dis_init));
-
 
     // Initialize the DFU service
     #ifndef DEBUG
@@ -348,6 +342,22 @@ static void services_init(void)
     };
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
+
+    // Declare a variable to hold the settings data
+    nrf_dfu_settings_t  *p_dfu_settings = (nrf_dfu_settings_t *) BOOTLOADER_SETTINGS_ADDRESS;
+
+    uint32_t appMajorVersion = (p_dfu_settings->app_version >> 16) & 0xFF;
+    uint32_t appMinorVersion = (p_dfu_settings->app_version >> 8) & 0xFF;
+    uint32_t appPatchVersion = (p_dfu_settings->app_version) & 0xFF;
+
+    char firmwareVersionStr[10];
+    sprintf(firmwareVersionStr, "%d.%d.%d", appMajorVersion, appMinorVersion, appPatchVersion);
+
+    // Add the Device Information Service
+    ble_dis_init_t dis_init = {0};
+    ble_srv_ascii_to_utf8(&dis_init.fw_rev_str, firmwareVersionStr);
+    dis_init.dis_char_rd_sec = SEC_OPEN;
+    APP_ERROR_CHECK(ble_dis_init(&dis_init));
     #endif
     //*/
 }

@@ -126,6 +126,7 @@
       <file file_name="../nRF5_SDK_Current/components/ble/ble_services/ble_dfu/ble_dfu.c" />
       <file file_name="../nRF5_SDK_Current/components/ble/ble_services/ble_dfu/ble_dfu_bonded.c" />
       <file file_name="../nRF5_SDK_Current/components/ble/ble_services/ble_dfu/ble_dfu_unbonded.c" />
+      <file file_name="../nRF5_SDK_Current/components/libraries/bootloader/dfu/nrf_dfu_settings.h" />
       <file file_name="../nRF5_SDK_Current/components/libraries/bootloader/dfu/nrf_dfu_svci.c" />
     </folder>
     <folder Name="nRF_Drivers">
