@@ -6,7 +6,7 @@ emBuild -config "Release" -echo ../TrailerLeveler_pca10056_s140.emProject
 set build-configuration=Release
 
 set majorFirmwareVersion=0
-set minorFirmwareVersion=3
+set minorFirmwareVersion=4
 set patchFirmwareVersion=0
 
 @REM set the firmware version as a uint32 where each bytes represents the major, minor and patch versionsS
