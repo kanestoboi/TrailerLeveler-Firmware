@@ -659,14 +659,6 @@ void bluetooth_update_battery_level(uint8_t batteryLevel)
 {
     ret_code_t err_code;
     err_code = ble_bas_battery_level_update(&m_bas, batteryLevel, BLE_CONN_HANDLE_ALL);
-    //if ((err_code != NRF_SUCCESS) &&
-    //    (err_code != NRF_ERROR_INVALID_STATE) &&
-    //    (err_code != NRF_ERROR_RESOURCES) &&
-    //    (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-    //   )
-    //{
-    //    APP_ERROR_HANDLER(err_code);
-    //}
 }
 
 

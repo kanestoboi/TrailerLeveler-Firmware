@@ -27,10 +27,18 @@
 
 #define ACCELEROMETER_SERVICE_UUID_BASE {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0xEB, 0xA1, 0xED, 0x11, 0xD9, 0x7D, 0x02, 0xF7, 0x49, 0x76}
 
-#define ACCELEROMETER_SERVICE_UUID               0x1400
-#define ACCELEROMETER_ADXL355_VALUE_CHAR_UUID    0x1401
-#define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID    0x1402
+#define ACCELEROMETER_SERVICE_UUID                  0x1400
+#define ACCELEROMETER_ADXL355_VALUE_CHAR_UUID       0x1401
+#define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID       0x1402
+#define ACCELEROMETER_ANGLE_CHAR_UUID               0x1403
+#define ACCELEROMETER_ORIENTATION_CHAR_UUID         0x1404
+#define ACCELEROMETER_CALIBRATION_CHAR_UUID         0x1405
 
+/**@brief   Macro for defining a ble_accelerometer instance.
+ *
+ * @param   _name   Name of the instance.
+ * @hideinitializer
+ */
 #define BLE_ACCELEROMETER_DEF(_name)                          \
 ble_accelerometer_service_t _name;                     \
 NRF_SDH_BLE_OBSERVER(_name ## _obs,                           \
@@ -71,8 +79,11 @@ typedef struct
 struct ble_accerometer_service_s
 {
     ble_accelerometer_evt_handler_t         evt_handler;                    /**< Event handler to be called for handling events in the Custom Service. */
-    uint16_t                      service_handle;                 /**< Handle of Accelerometer Service (as provided by the BLE stack). */
-    ble_gatts_char_handles_t      accerometer_value_handles;      /**< Handles related to the Accelerometer Value characteristic. */
+    uint16_t                        service_handle;                 /**< Handle of Accelerometer Service (as provided by the BLE stack). */
+    ble_gatts_char_handles_t      accelerometer_value_handles;      /**< Handles related to the Accelerometer Value characteristic. */
+    ble_gatts_char_handles_t        accelerometer_angles_handles;
+    ble_gatts_char_handles_t        accelerometer_orientation_handles;
+    ble_gatts_char_handles_t        accelerometer_calibration_handles;
     uint16_t                      conn_handle;                    /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
     uint8_t                       uuid_type; 
 };
@@ -123,6 +134,11 @@ uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_
 void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service, ble_accelerometer_evt_t * p_evt);
 
 uint32_t ble_accelerometer_service_value_set(uint8_t *custom_value, uint8_t custom_value_length);
+uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t custom_value_length);
+
+void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles);
+
+uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
 extern ble_accelerometer_service_t m_accelerometer;
 

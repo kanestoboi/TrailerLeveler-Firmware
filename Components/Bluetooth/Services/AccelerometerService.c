@@ -5,15 +5,21 @@
 #include "nrf_gpio.h"
 #include "boards.h"
 #include "nrf_log.h"
+#include "math.h"
+#include "nrf_nvmc.h"
+
+#define _RAD_TO_DEG 57.2957795131f  // Constant to convert radians to degrees
+#define _PI 3.14159265359f           // Constant for the value of pi
+
+float mAnglesCalibrationOffsets[3];
+float mLastSentAngles[3];
 
 static uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
+static uint32_t accelerometer_angles_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+static uint32_t accelerometer_orientation_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+static uint32_t accelerometer_calibration_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 
-/**@brief   Macro for defining a ble_accelerometer instance.
- *
- * @param   _name   Name of the instance.
- * @hideinitializer
- */
-                                                                                    
+static uint8_t mAccelerometerOrientation = 1;
 
 uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer)
 {
@@ -46,7 +52,33 @@ uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerom
     p_accelerometer_service->conn_handle           = BLE_CONN_HANDLE_INVALID;
 
     // Add accelerometer value characteristic
-    return accelerometer_value_char_add(p_accelerometer_service, p_ble_accelerometer_service_init, accelerometer);
+    
+    err_code = accelerometer_value_char_add(p_accelerometer_service, p_ble_accelerometer_service_init, accelerometer);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+    err_code = accelerometer_angles_char_add(p_accelerometer_service, p_ble_accelerometer_service_init);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    err_code = accelerometer_orientation_char_add(p_accelerometer_service, p_ble_accelerometer_service_init);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    err_code = accelerometer_calibration_char_add(p_accelerometer_service, p_ble_accelerometer_service_init);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+
+
+    return NRF_SUCCESS;
 }    
 
 /**@brief Function for adding the Custom Value characteristic.
@@ -123,7 +155,222 @@ uint32_t accelerometer_value_char_add(ble_accelerometer_service_t * p_accelerome
 
     err_code = sd_ble_gatts_characteristic_add(p_accelerometer_service->service_handle, &char_md,
                                                &attr_char_value,
-                                               &p_accelerometer_service->accerometer_value_handles);
+                                               &p_accelerometer_service->accelerometer_value_handles);
+    
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    return NRF_SUCCESS;
+
+}
+
+/**@brief Function for adding the Custom Value characteristic.
+ *
+ * @param[in]   p_cus        Custom Service structure.
+ * @param[in]   p_cus_init   Information needed to initialize the service.
+ *
+ * @return      NRF_SUCCESS on success, otherwise an error code.
+ */
+uint32_t accelerometer_angles_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+{
+    uint32_t            err_code;
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_md_t cccd_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&cccd_md, 0, sizeof(cccd_md));
+
+    // Read  operation on Cccd should be possible without authentication.
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
+    
+    cccd_md.vloc       = BLE_GATTS_VLOC_STACK;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.read   = 1;
+    char_md.char_props.write  = 0;
+    char_md.char_props.notify = 1; 
+    char_md.p_char_user_desc  = NULL;
+    char_md.p_char_pf         = NULL;
+    char_md.p_user_desc_md    = NULL;
+    char_md.p_cccd_md         = &cccd_md; 
+    char_md.p_sccd_md         = NULL;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    attr_md.read_perm  = p_ble_accelerometer_service_init->accelerometer_value_char_attr_md.read_perm;
+    attr_md.write_perm = p_ble_accelerometer_service_init->accelerometer_value_char_attr_md.write_perm;
+    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth    = 0;
+    attr_md.wr_auth    = 0;
+    attr_md.vlen       = 0;
+
+    ble_uuid.type = p_accelerometer_service->uuid_type;
+
+    ble_uuid.uuid = ACCELEROMETER_ANGLE_CHAR_UUID;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = 6*sizeof(uint8_t);
+    attr_char_value.init_offs = 0;
+    
+    attr_char_value.max_len   = 12*sizeof(uint8_t);
+
+
+    err_code = sd_ble_gatts_characteristic_add(p_accelerometer_service->service_handle, &char_md,
+                                               &attr_char_value,
+                                               &p_accelerometer_service->accelerometer_angles_handles);
+    
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    return NRF_SUCCESS;
+
+}
+
+/**@brief Function for adding the Custom Value characteristic.
+ *
+ * @param[in]   p_cus        Custom Service structure.
+ * @param[in]   p_cus_init   Information needed to initialize the service.
+ *
+ * @return      NRF_SUCCESS on success, otherwise an error code.
+ */
+uint32_t accelerometer_orientation_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+{
+    uint32_t            err_code;
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_md_t cccd_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&cccd_md, 0, sizeof(cccd_md));
+
+    // Read  operation on Cccd should be possible without authentication.
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
+    
+    cccd_md.vloc       = BLE_GATTS_VLOC_STACK;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.read   = 1;
+    char_md.char_props.write  = 1;
+    char_md.char_props.notify = 0; 
+    char_md.p_char_user_desc  = NULL;
+    char_md.p_char_pf         = NULL;
+    char_md.p_user_desc_md    = NULL;
+    char_md.p_cccd_md         = &cccd_md; 
+    char_md.p_sccd_md         = NULL;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    attr_md.read_perm  = p_ble_accelerometer_service_init->accelerometer_value_char_attr_md.read_perm;
+    attr_md.write_perm = p_ble_accelerometer_service_init->accelerometer_value_char_attr_md.write_perm;
+    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth    = 0;
+    attr_md.wr_auth    = 0;
+    attr_md.vlen       = 0;
+
+    ble_uuid.type = p_accelerometer_service->uuid_type;
+
+    ble_uuid.uuid = ACCELEROMETER_ORIENTATION_CHAR_UUID;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = 1*sizeof(uint8_t);
+    attr_char_value.init_offs = 0;
+        
+    attr_char_value.p_value   = &mAccelerometerOrientation; // Pointer to the initial value
+
+    attr_char_value.max_len   = 1*sizeof(uint8_t);
+
+    err_code = sd_ble_gatts_characteristic_add(p_accelerometer_service->service_handle, &char_md,
+                                               &attr_char_value,
+                                               &p_accelerometer_service->accelerometer_orientation_handles);
+    
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    return NRF_SUCCESS;
+
+}
+
+/**@brief Function for adding the Custom Value characteristic.
+ *
+ * @param[in]   p_cus        Custom Service structure.
+ * @param[in]   p_cus_init   Information needed to initialize the service.
+ *
+ * @return      NRF_SUCCESS on success, otherwise an error code.
+ */
+uint32_t accelerometer_calibration_char_add(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+{
+    uint32_t            err_code;
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_md_t cccd_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&cccd_md, 0, sizeof(cccd_md));
+
+    // Read  operation on Cccd should be possible without authentication.
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
+    
+    cccd_md.vloc       = BLE_GATTS_VLOC_STACK;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.read   = 1;
+    char_md.char_props.write  = 1;
+    char_md.char_props.notify = 0; 
+    char_md.p_char_user_desc  = NULL;
+    char_md.p_char_pf         = NULL;
+    char_md.p_user_desc_md    = NULL;
+    char_md.p_cccd_md         = &cccd_md; 
+    char_md.p_sccd_md         = NULL;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    attr_md.read_perm  = p_ble_accelerometer_service_init->accelerometer_value_char_attr_md.read_perm;
+    attr_md.write_perm = p_ble_accelerometer_service_init->accelerometer_value_char_attr_md.write_perm;
+    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth    = 0;
+    attr_md.wr_auth    = 0;
+    attr_md.vlen       = 0;
+
+    ble_uuid.type = p_accelerometer_service->uuid_type;
+
+    ble_uuid.uuid = ACCELEROMETER_CALIBRATION_CHAR_UUID;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = 1*sizeof(uint8_t);
+    attr_char_value.init_offs = 0;
+        
+    attr_char_value.p_value   = &mAccelerometerOrientation; // Pointer to the initial value
+
+    attr_char_value.max_len   = 1*sizeof(uint8_t);
+
+    err_code = sd_ble_gatts_characteristic_add(p_accelerometer_service->service_handle, &char_md,
+                                               &attr_char_value,
+                                               &p_accelerometer_service->accelerometer_calibration_handles);
     
     if (err_code != NRF_SUCCESS)
     {
@@ -208,14 +455,14 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
    const ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
     
     // Check if the handle passed with the event matches the Custom Value Characteristic handle.
-    if (p_evt_write->handle == p_accelerometer_service->accerometer_value_handles.value_handle)
+    if (p_evt_write->handle == p_accelerometer_service->accelerometer_value_handles.value_handle)
     {
         // Put specific task here. 
         NRF_LOG_INFO("Message Received.");
     }
 
     // Check if the Custom value CCCD is written to and that the value is the appropriate length, i.e 2 bytes.
-    if ((p_evt_write->handle == p_accelerometer_service->accerometer_value_handles.cccd_handle)
+    if ((p_evt_write->handle == p_accelerometer_service->accelerometer_value_handles.cccd_handle)
         && (p_evt_write->len == 2)
        )
     {
@@ -238,9 +485,32 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         }
 
     }
+
+    /// Check if the handle passed with the event matches the Orientation Characteristic handle.
+    if ((p_evt_write->handle == p_accelerometer_service->accelerometer_orientation_handles.value_handle)
+        && (p_evt_write->len == 1)
+       )
+    {
+        NRF_LOG_INFO("Message Received from orientation.");
+
+        memcpy(&mAccelerometerOrientation, p_evt_write->data, sizeof(uint8_t));
+    }
+
+        /// Check if the handle passed with the event matches the Orientation Characteristic handle.
+    if ((p_evt_write->handle == p_accelerometer_service->accelerometer_calibration_handles.value_handle)
+        && (p_evt_write->len == 1)
+       )
+    {
+        NRF_LOG_INFO("Message Received from calibration.");
+
+        uint8_t val = 0;
+        ble_accelerometer_service_calibration_update(&m_accelerometer, &val, 1);
+
+
+        
+    }
 };
 
-uint32_t err_codess;
 uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
 {
     if (p_accelerometer_service == NULL)
@@ -259,12 +529,12 @@ uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_
     gatts_value.p_value = custom_value;
 
     // Update database.
-    err_codess= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
-                                        p_accelerometer_service->accerometer_value_handles.value_handle,
+    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+                                        p_accelerometer_service->accelerometer_value_handles.value_handle,
                                         &gatts_value);
-    if (err_codess != NRF_SUCCESS)
+    if (err_code != NRF_SUCCESS)
     {
-        return err_codess;
+        return err_code;
     }
 
     // Send value if connected and notifying.
@@ -274,7 +544,154 @@ uint32_t ble_accelerometer_service_value_update(ble_accelerometer_service_t * p_
 
         memset(&hvx_params, 0, sizeof(hvx_params));
 
-        hvx_params.handle = p_accelerometer_service->accerometer_value_handles.value_handle;
+        hvx_params.handle = p_accelerometer_service->accelerometer_value_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
+uint32_t ble_accelerometer_service_angles_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
+{
+    if (p_accelerometer_service == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = custom_value_length*sizeof(uint8_t);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = custom_value;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+                                        p_accelerometer_service->accelerometer_angles_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = p_accelerometer_service->accelerometer_angles_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
+uint32_t ble_accelerometer_service_orientation_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
+{
+    if (p_accelerometer_service == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = custom_value_length*sizeof(uint8_t);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = custom_value;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+                                        p_accelerometer_service->accelerometer_orientation_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = p_accelerometer_service->accelerometer_orientation_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
+uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
+{
+    if (p_accelerometer_service == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = custom_value_length*sizeof(uint8_t);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = custom_value;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+                                        p_accelerometer_service->accelerometer_calibration_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = p_accelerometer_service->accelerometer_calibration_handles.value_handle;
         hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
         hvx_params.offset = gatts_value.offset;
         hvx_params.p_len  = &gatts_value.len;
@@ -325,4 +742,48 @@ void on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service,
 uint32_t ble_accelerometer_service_value_set(uint8_t *custom_value, uint8_t custom_value_length)
 {
     return ble_accelerometer_service_value_update(&m_accelerometer, custom_value, custom_value_length); 
+}
+
+uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t custom_value_length)
+{
+    memcpy(&mLastSentAngles, custom_value, custom_value_length); 
+
+
+
+    return ble_accelerometer_service_angles_update(&m_accelerometer, custom_value, custom_value_length); 
+}
+
+void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles) {
+    switch (mAccelerometerOrientation) {
+        case 1:
+            angles[0] = _RAD_TO_DEG * (atan2(angleZ, -angleY) + _PI);
+            angles[1] = _RAD_TO_DEG * (atan2(-angleX, -angleZ) + _PI);
+            angles[2] = _RAD_TO_DEG * (atan2(-angleZ, -angleX) + _PI);
+            break;
+        case 2:
+            angles[0] = _RAD_TO_DEG * (atan2(-angleY, -angleZ) + _PI);
+            angles[1] = _RAD_TO_DEG * (atan2(-angleX, angleY) + _PI);
+            angles[2] = _RAD_TO_DEG * (atan2(-angleY, -angleX) + _PI);
+            break;
+        case 3:
+            angles[0] = _RAD_TO_DEG * (atan2(-angleY, -angleX) + _PI);
+            angles[1] = _RAD_TO_DEG * (atan2(angleZ, angleY) + _PI);
+            angles[2] = _RAD_TO_DEG * (atan2(-angleY, angleZ) + _PI);
+            break;
+        case 4:
+            angles[0] = _RAD_TO_DEG * (atan2(-angleY, angleX) + _PI);
+            angles[1] = _RAD_TO_DEG * (atan2(-angleZ, angleY) + _PI);
+            angles[2] = _RAD_TO_DEG * (atan2(-angleY, -angleZ) + _PI);
+            break;
+        case 5:
+            angles[0] = _RAD_TO_DEG * (atan2(-angleY, angleZ) + _PI);
+            angles[1] = _RAD_TO_DEG * (atan2(angleX, angleY) + _PI);
+            angles[2] = _RAD_TO_DEG * (atan2(-angleY, angleX) + _PI);
+            break;
+        case 6:
+            angles[0] = _RAD_TO_DEG * (atan2(-angleZ, angleY) + _PI);
+            angles[1] = _RAD_TO_DEG * (atan2(-angleX, angleZ) + _PI);
+            angles[2] = _RAD_TO_DEG * (atan2(-angleZ, -angleX) + _PI);
+            break;
+    }
 }

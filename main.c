@@ -43,6 +43,11 @@ MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
 MAX17260 max17260Sensor;
 
+int32_t xoutput = 0;
+int32_t youtput = 0;
+int32_t zoutput = 0;
+
+float map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2);
 
 /**@brief Function for handling the Accelerometer measurement timer timeout.
  *
@@ -65,7 +70,30 @@ static void notification_timeout_handler(void * p_context)
         static int16_t AccValue[3];
         if(mpu6050_ReadAcc(&mpu6050Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
-            uint32_t err_code = ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)6);      
+            xoutput = (0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
+            youtput = (0.9396f * youtput + 0.0604 * (float)AccValue[1]);
+            zoutput = (0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
+
+            float xGs = map((uint32_t)xoutput, -32768, 32767, -90, 90);
+            float yGs = map((uint32_t)youtput, -32768, 32767, -90, 90);
+            float zGs = map((uint32_t)zoutput, -32768, 32767, -90, 90);
+
+            
+
+            float angles[3];
+
+            calculateAnglesFromDeviceOrientation(xGs, yGs, zGs, angles);
+
+            /*NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[0]) ); // display the read values
+            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[1]) ); // display the read values
+            NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(angles[2]) ); // display the read values
+
+            NRF_LOG_RAW_INFO("\n");
+            NRF_LOG_FLUSH();*/
+
+            
+            uint32_t err_code = ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)6);
+            ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);      
         }
         else
         {
@@ -83,7 +111,29 @@ static void notification_timeout_handler(void * p_context)
              * will not be NRF_SUCCESS if there is no ble device
              * connected to the trailer leveler. The error code is not used.
             */
+
+            /*
+            float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
+            float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
+            float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);*/
+
+            float xGs = map(AccValue[0], -262144, 262143, -90, 90);
+            float yGs = map(AccValue[1], -262144, 262143, -90, 90);
+            float zGs = map(AccValue[2], -262144, 262143, -90, 90);
+
+            float angles[3];
+
+            calculateAnglesFromDeviceOrientation(xGs, yGs, zGs, angles);
+/*
+            NRF_LOG_RAW_INFO("x:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(xGs) ); // display the read values
+            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(yGs) ); // display the read values
+            NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(zGs) ); // display the read values
+
+            NRF_LOG_RAW_INFO("\n");
+            NRF_LOG_FLUSH();*/
+
             ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)12);
+            ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);
         }
     }
 
@@ -136,16 +186,18 @@ void bluetooth_advertising_timeout_callback(void)
         // Enable wakeup from pin P0.31
         nrf_gpio_cfg_sense_input(31, NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
 
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x28); // Set MPU6050 cycle between sleep mode and wake up mode
-        (void)mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT2_REG , 0x02); // Sets the wake up period to be 5 Hz
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x28); // Set MPU6050 cycle between sleep mode and wake up mode
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT2_REG , 0x03); // Sets the wake up period to be 5 Hz
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x00);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG , 0x00);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
 
         // Setup the wakeup interrupt on the MPU6050 
         mpu6050_SetMotionDetectionThreshold(&mpu6050Sensor, 1);   
         mpu6050_SetMotionDetectionDuration(&mpu6050Sensor, 0x01);
-        mpu6050_SetAccelerometerPowerOnDelay(&mpu6050Sensor, 1);
+        mpu6050_SetAccelerometerPowerOnDelay(&mpu6050Sensor, 0);
         mpu6050_SetFreefallDetectionCounterDecrement(&mpu6050Sensor, 1);
         mpu6050_SetMotionDetectionCounterDecrement(&mpu6050Sensor, 1);
-        mpu6050_EnableInterrupt(&mpu6050Sensor, MOT_EN); 
+        mpu6050_EnableInterrupt(&mpu6050Sensor, MOT_EN | FF_EN); 
     }
 
 #ifdef DEBUG_NRF
@@ -367,5 +419,9 @@ int main(void)
     {
         bluetooth_idle_state_handle();
     }
+}
+
+float map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2) {
+    return low2 + ((float)(high2 - low2) * (value - low1) / (high1 - low1));
 }
 
