@@ -48,7 +48,7 @@
 #define FIRMWARE_REVISION_NUMBER        "v0.3.0"
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                18000                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
+#define APP_ADV_DURATION                90000                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
