@@ -45,7 +45,6 @@
 
 #define DEVICE_NAME                     "Trailer Leveler"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
-#define FIRMWARE_REVISION_NUMBER        "v0.3.0"
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
 #define APP_ADV_DURATION                18000                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
@@ -645,11 +644,11 @@ void bluetooth_initialise_accelerometer_service(accelerometer_t accelerometerTyp
      // Initialize custom Service init structure to zero.
     memset(&accelerometer_service_init, 0, sizeof(accelerometer_service_init));
 
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_value_char_attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_value_char_attr_md.write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_sensor_data_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_sensor_data_char_attr_md.write_perm);
 
-    // Set the cus event handler
-    accelerometer_service_init.evt_handler = on_accelerometer_evt;
+    // Set the accelerometer event handler
+    accelerometer_service_init.evt_handler = ble_accelerometer_on_accelerometer_evt;
 
     ret_code_t err_code = ble_acceleration_service_init(&m_accelerometer, &accelerometer_service_init, accelerometerType);
     APP_ERROR_CHECK(err_code);

@@ -77,6 +77,12 @@
           <file file_name="Components/LED/nrf_buddy_led.c" />
           <file file_name="Components/LED/nrf_buddy_led.h" />
         </folder>
+        <folder
+          Name="SavedParameters"
+          exclude=""
+          filter="*.*"
+          path="Components/SavedParameters"
+          recurse="No" />
       </folder>
       <file file_name="main.c" />
       <file file_name="sdk_config.h" />

@@ -92,7 +92,7 @@ static void notification_timeout_handler(void * p_context)
             NRF_LOG_FLUSH();*/
 
             
-            uint32_t err_code = ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)6);
+            uint32_t err_code = ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)6);
             ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);      
         }
         else
@@ -107,7 +107,7 @@ static void notification_timeout_handler(void * p_context)
         if(adxl355_ReadAcc(&adxl355Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
             /*
-             * This error code returned from ble_accelerometer_service_value_set 
+             * This error code returned from ble_accelerometer_service_sensor_data_set 
              * will not be NRF_SUCCESS if there is no ble device
              * connected to the trailer leveler. The error code is not used.
             */
@@ -132,7 +132,7 @@ static void notification_timeout_handler(void * p_context)
             NRF_LOG_RAW_INFO("\n");
             NRF_LOG_FLUSH();*/
 
-            ble_accelerometer_service_value_set((uint8_t*)AccValue, (uint8_t)12);
+            ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)12);
             ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);
         }
     }
