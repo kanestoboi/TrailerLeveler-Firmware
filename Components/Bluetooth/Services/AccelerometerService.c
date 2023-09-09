@@ -1,18 +1,13 @@
 #include "sdk_common.h"
 #include "ble_srv_common.h"
 #include "AccelerometerService.h"
-#include <string.h>
 #include "nrf_gpio.h"
 #include "boards.h"
 #include "nrf_log.h"
 #include "math.h"
-#include "nrf_fstorage.h"
-#include "nrf_fstorage_sd.h"
 #include "nrf_log_ctrl.h"
 
 #include "Components/SavedParameters/SavedParameters.h"
-
-#pragma pack(4)
 
 #define _RAD_TO_DEG 57.2957795131f  // Constant to convert radians to degrees
 #define _PI 3.14159265359f           // Constant for the value of pi
@@ -54,7 +49,6 @@ uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerom
     // Initialize service structure
     p_accelerometer_service->evt_handler           = p_ble_accelerometer_service_init->evt_handler;
     p_accelerometer_service->conn_handle           = BLE_CONN_HANDLE_INVALID;
-
 
     saved_parameters_init();
 
