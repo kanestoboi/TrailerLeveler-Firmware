@@ -142,10 +142,11 @@ void saved_parameters_init()
     /* Register first to receive an event when initialization is complete. */
     (void) fds_register(fds_evt_handler);
 
-
+    // Initialise the nRF Flash Data Storage module
     ret_code_t err_code = fds_init();
     APP_ERROR_CHECK(err_code);
 
+    // wait for the nRF Flash Data Storeage module to be initialised
     while (!m_fds_initialized)
     {
     }
@@ -157,6 +158,7 @@ void saved_parameters_init()
 
     NRF_LOG_INFO("Found %d valid records.", stat.valid_records);
     NRF_LOG_INFO("Found %d dirty records (ready to be garbage collected).", stat.dirty_records);
+    NRF_LOG_INFO("%d Pages available.", stat.pages_available);
 
     fds_record_desc_t desc = {0};
     fds_find_token_t  tok  = {0};
@@ -258,27 +260,18 @@ void saved_parameters_SaveAngleOffsets(float * angles)
     mSavedParameters.anglesCalibrationOffsets[1] = angles[1];
     mSavedParameters.anglesCalibrationOffsets[2] = angles[2];
     record_update();
-
-    //ret_code_t err_code = nrf_fstorage_erase(&fstorage, START_ADDRESS, 1, NULL);
-    //APP_ERROR_CHECK(err_code);
 }
 
 void saved_parameters_SaveOrientation(uint32_t orientation)
 {
     mSavedParameters.orientation = orientation;
     record_update();
-
-    //ret_code_t err_code = nrf_fstorage_erase(&fstorage, START_ADDRESS, 1, NULL);
-    //APP_ERROR_CHECK(err_code);
 }
 
 void saved_parameters_SaveHitchAngle(float angle)
 {
     mSavedParameters.savedHitchHeight = angle;
     record_update();
-
-    //ret_code_t err_code = nrf_fstorage_erase(&fstorage, START_ADDRESS, 1, NULL);
-    //APP_ERROR_CHECK(err_code);
 }
 
 static void record_update()
