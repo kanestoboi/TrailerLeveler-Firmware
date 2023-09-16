@@ -7,7 +7,7 @@ set build-configuration=Release
 
 set majorFirmwareVersion=0
 set minorFirmwareVersion=4
-set patchFirmwareVersion=1
+set patchFirmwareVersion=2
 
 @REM set the firmware version as a uint32 where each bytes represents the major, minor and patch versionsS
 set /a firmwareVersion=(majorFirmwareVersion * 65536) + (minorFirmwareVersion * 256) + patchFirmwareVersion
