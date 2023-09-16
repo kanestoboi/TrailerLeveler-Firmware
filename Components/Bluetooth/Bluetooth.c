@@ -13,6 +13,7 @@
 #include "ble_advertising.h"
 #include "ble_conn_params.h"
 #include "ble_bas.h"
+#include "ble_dis.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
@@ -28,7 +29,7 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
-
+#include "nrf_dfu_settings.h"
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
 #include "Services/AccelerometerService.h"
@@ -46,7 +47,7 @@
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                18000                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
+#define APP_ADV_DURATION                65535                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -331,6 +332,7 @@ static void services_init(void)
     err_code = ble_bas_init(&m_bas, &bas_init);
     APP_ERROR_CHECK(err_code);
 
+
     // Initialize the DFU service
     #ifndef DEBUG
     ble_dfu_buttonless_init_t dfus_init =
@@ -339,6 +341,22 @@ static void services_init(void)
     };
     err_code = ble_dfu_buttonless_init(&dfus_init);
     APP_ERROR_CHECK(err_code);
+
+    // Declare a variable to hold the settings data
+    nrf_dfu_settings_t  *p_dfu_settings = (nrf_dfu_settings_t *) BOOTLOADER_SETTINGS_ADDRESS;
+
+    uint32_t appMajorVersion = (p_dfu_settings->app_version >> 16) & 0xFF;
+    uint32_t appMinorVersion = (p_dfu_settings->app_version >> 8) & 0xFF;
+    uint32_t appPatchVersion = (p_dfu_settings->app_version) & 0xFF;
+
+    char firmwareVersionStr[10];
+    sprintf(firmwareVersionStr, "%d.%d.%d", appMajorVersion, appMinorVersion, appPatchVersion);
+
+    // Add the Device Information Service
+    ble_dis_init_t dis_init = {0};
+    ble_srv_ascii_to_utf8(&dis_init.fw_rev_str, firmwareVersionStr);
+    dis_init.dis_char_rd_sec = SEC_OPEN;
+    APP_ERROR_CHECK(ble_dis_init(&dis_init));
     #endif
     //*/
 }
@@ -626,11 +644,11 @@ void bluetooth_initialise_accelerometer_service(accelerometer_t accelerometerTyp
      // Initialize custom Service init structure to zero.
     memset(&accelerometer_service_init, 0, sizeof(accelerometer_service_init));
 
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_value_char_attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_value_char_attr_md.write_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_sensor_data_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&accelerometer_service_init.accelerometer_sensor_data_char_attr_md.write_perm);
 
-    // Set the cus event handler
-    accelerometer_service_init.evt_handler = on_accelerometer_evt;
+    // Set the accelerometer event handler
+    accelerometer_service_init.evt_handler = ble_accelerometer_on_accelerometer_evt;
 
     ret_code_t err_code = ble_acceleration_service_init(&m_accelerometer, &accelerometer_service_init, accelerometerType);
     APP_ERROR_CHECK(err_code);
@@ -640,14 +658,6 @@ void bluetooth_update_battery_level(uint8_t batteryLevel)
 {
     ret_code_t err_code;
     err_code = ble_bas_battery_level_update(&m_bas, batteryLevel, BLE_CONN_HANDLE_ALL);
-    //if ((err_code != NRF_SUCCESS) &&
-    //    (err_code != NRF_ERROR_INVALID_STATE) &&
-    //    (err_code != NRF_ERROR_RESOURCES) &&
-    //    (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING)
-    //   )
-    //{
-    //    APP_ERROR_HANDLER(err_code);
-    //}
 }
 
 
