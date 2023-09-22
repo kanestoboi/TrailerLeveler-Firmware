@@ -63,6 +63,8 @@
           <folder Name="Services">
             <file file_name="Components/Bluetooth/Services/AccelerometerService.c" />
             <file file_name="Components/Bluetooth/Services/AccelerometerService.h" />
+            <file file_name="Components/Bluetooth/Services/EnvironmentalService.c" />
+            <file file_name="Components/Bluetooth/Services/EnvironmentalService.h" />
           </folder>
           <file file_name="Components/Bluetooth/Bluetooth.c" />
           <file file_name="Components/Bluetooth/Bluetooth.h" />

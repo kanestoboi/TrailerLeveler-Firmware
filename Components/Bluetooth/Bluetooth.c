@@ -32,7 +32,9 @@
 #include "nrf_dfu_settings.h"
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
+
 #include "Services/AccelerometerService.h"
+#include "Services/EnvironmentalService.h"
 
 // DFU-related #includes
 #include "nrf_power.h"
@@ -104,6 +106,7 @@ NRF_SDH_STATE_OBSERVER(m_buttonless_dfu_state_obs, 0) =
     .handler = buttonless_dfu_sdh_state_observer,
 };
 BLE_ACCELEROMETER_DEF(m_accelerometer);
+BLE_ESS_DEF(m_ess);
 
 /**@brief Register application shutdown handler with priority 0.
  */
@@ -358,7 +361,9 @@ static void services_init(void)
     dis_init.dis_char_rd_sec = SEC_OPEN;
     APP_ERROR_CHECK(ble_dis_init(&dis_init));
     #endif
-    //*/
+    
+    bluetooth_initialise_ess_service();
+
 }
 
 
@@ -651,6 +656,23 @@ void bluetooth_initialise_accelerometer_service(accelerometer_t accelerometerTyp
     accelerometer_service_init.evt_handler = ble_accelerometer_on_accelerometer_evt;
 
     ret_code_t err_code = ble_acceleration_service_init(&m_accelerometer, &accelerometer_service_init, accelerometerType);
+    APP_ERROR_CHECK(err_code);
+}
+
+void bluetooth_initialise_ess_service()
+{
+    ble_ess_service_init_t ess_service_init;
+    
+     // Initialize custom Service init structure to zero.
+    memset(&ess_service_init, 0, sizeof(ess_service_init));
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ess_service_init.ess_temperature_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ess_service_init.ess_temperature_char_attr_md.write_perm);
+
+    // Set the accelerometer event handler
+    ess_service_init.evt_handler = ble_ess_on_ess_evt;
+
+    ret_code_t err_code = ble_ess_service_init(&m_ess, &ess_service_init);
     APP_ERROR_CHECK(err_code);
 }
 
