@@ -91,7 +91,7 @@ struct ble_ess_service_s
  *
  * @return      NRF_SUCCESS on successful initialization of service, otherwise an error code.
  */
-uint32_t ble_ess_service_init(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init);
+uint32_t ble_ess_service_init();
 
 /**@brief Function for handling the Application's BLE Stack events.
  *
@@ -128,7 +128,7 @@ uint32_t ble_ess_service_sensor_temperature_update(ble_ess_service_t * p_ess_ser
 
 void ble_ess_on_temperature_evt(ble_ess_service_t * p_ess_service, ble_ess_evt_t * p_evt);
 
-uint32_t ble_ess_service_temperature_set(uint8_t *temperature, uint8_t temperatureLength);
+uint32_t ble_ess_service_temperature_set(float *temperature);
 
 extern ble_ess_service_t m_ess;
 

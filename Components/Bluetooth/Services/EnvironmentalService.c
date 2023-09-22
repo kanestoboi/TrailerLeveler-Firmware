@@ -15,38 +15,46 @@ static uint32_t ess_orientation_char_add(ble_ess_service_t * p_ess_service, cons
 static uint32_t ess_calibration_char_add(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init);
 static uint32_t ess_saved_hitch_angle_char_add(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init);
 
-uint32_t ble_ess_service_init(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init)
+BLE_ESS_DEF(m_ess);
+
+uint32_t ble_ess_service_init()
 {
-    if (p_ess_service == NULL || p_ble_ess_service_init == NULL)
-    {
-        return NRF_ERROR_NULL;
-    }
+    ble_ess_service_init_t ess_service_init;
+    
+    // Initialize Environmental Sensor Service init structure to zero.
+    memset(&ess_service_init, 0, sizeof(ess_service_init));
+
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ess_service_init.ess_temperature_char_attr_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&ess_service_init.ess_temperature_char_attr_md.write_perm);
+
+    // Set the ess event handler
+    ess_service_init.evt_handler = ble_ess_on_ess_evt;
 
     uint32_t   err_code;
     ble_uuid_t ble_uuid;
 
-    p_ess_service->conn_handle = BLE_CONN_HANDLE_INVALID;
+    m_ess.conn_handle = BLE_CONN_HANDLE_INVALID;
 
     ble_uuid128_t base_uuid = {ENVIRONMENTAL_SENSING_SERVICE_UUID};
-    err_code =  sd_ble_uuid_vs_add(&base_uuid, &p_ess_service->uuid_type);
+    err_code =  sd_ble_uuid_vs_add(&base_uuid, &m_ess.uuid_type);
     VERIFY_SUCCESS(err_code);
 
-    // Add service
+    // Assign the ESS UUID to the uuid object
     BLE_UUID_BLE_ASSIGN(ble_uuid, ENVIRONMENTAL_SENSING_SERVICE_UUID);
 
-    // Add the Custom Service
-    err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &p_ess_service->service_handle);
+    // Add the Environmental Sensor Service
+    err_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &ble_uuid, &m_ess.service_handle);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;
     }
 
     // Initialize service structure
-    p_ess_service->evt_handler           = p_ble_ess_service_init->evt_handler;
-    p_ess_service->conn_handle           = BLE_CONN_HANDLE_INVALID;
+    m_ess.evt_handler           = ble_ess_on_ess_evt;
+    m_ess.conn_handle           = BLE_CONN_HANDLE_INVALID;
 
     // Add ess value characteristic to the ess service
-    err_code = ess_temperature_char_add(p_ess_service, p_ble_ess_service_init);
+    err_code = ess_temperature_char_add(&m_ess, &ess_service_init);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;
@@ -55,10 +63,10 @@ uint32_t ble_ess_service_init(ble_ess_service_t * p_ess_service, const ble_ess_s
     return NRF_SUCCESS;
 }    
 
-/**@brief Function for adding the acceleration sensor data characteristic.
+/**@brief Function for adding the temperature characteristic.
  *
- * @param[in]   p_cus        Custom Service structure.
- * @param[in]   p_cus_init   Information needed to initialize the service.
+ * @param[in]   p_ess_service               Environmental Sensor Service structure.
+ * @param[in]   p_ble_ess_service_init      Information needed to initialize the service.
  *
  * @return      NRF_SUCCESS on success, otherwise an error code.
  */
@@ -118,7 +126,6 @@ uint32_t ess_temperature_char_add(ble_ess_service_t * p_ess_service, const ble_e
     return err_code;
 }
 
-
 void ble_ess_on_ble_evt( ble_evt_t const * p_ble_evt, void * p_context)
 {
     ble_ess_service_t * p_ess_service = (ble_ess_service_t *) p_context;
@@ -150,8 +157,8 @@ void ble_ess_on_ble_evt( ble_evt_t const * p_ble_evt, void * p_context)
 
 /**@brief Function for handling the Connect event.
  *
- * @param[in]   p_cus       Custom Service structure.
- * @param[in]   p_ble_evt   Event received from the BLE stack.
+ * @param[in]   p_ess_service       Environmental Sensor Service structure.
+ * @param[in]   p_ble_evt           Event received from the BLE stack.
  */
 static void ble_ess_on_connect(ble_ess_service_t * p_ess_service, ble_evt_t const * p_ble_evt)
 {
@@ -172,8 +179,8 @@ static void ble_ess_on_connect(ble_ess_service_t * p_ess_service, ble_evt_t cons
 
 /**@brief Function for handling the Disconnect event.
  *
- * @param[in]   p_cus       Custom Service structure.
- * @param[in]   p_ble_evt   Event received from the BLE stack.
+ * @param[in]   p_ess_service       Environmental Sensor Service structure.
+ * @param[in]   p_ble_evt           Event received from the BLE stack.
  */
 static void ble_ess_on_disconnect(ble_ess_service_t * p_ess_service, ble_evt_t const * p_ble_evt)
 {
@@ -181,28 +188,24 @@ static void ble_ess_on_disconnect(ble_ess_service_t * p_ess_service, ble_evt_t c
     p_ess_service->conn_handle = BLE_CONN_HANDLE_INVALID;
 }
 
-/* This code belongs in ble_cus.c*/
-
 /**@brief Function for handling the Write event.
  *
- * @param[in]   p_cus       Custom Service structure.
+ * @param[in]   p_ess_service       Environmental Sensor Service.
  * @param[in]   p_ble_evt   Event received from the BLE stack.
  */
 static void ble_ess_on_write(ble_ess_service_t * p_ess_service, ble_evt_t const * p_ble_evt)
 {
-   const ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
+    const ble_gatts_evt_write_t * p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
     
-    // Check if the handle passed with the event matches the Custom Value Characteristic handle.
+    // Check if the handle passed with the event matches the Temperature Characteristic handle.
     if (p_evt_write->handle == p_ess_service->ess_temperature_handles.value_handle)
     {
         // Put specific task here. 
         NRF_LOG_INFO("Message Received.");
     }
-
-    
 };
 
-uint32_t ble_ess_service_temperature_update(ble_ess_service_t * p_ess_service, uint8_t *custom_value, uint8_t custom_value_length)
+uint32_t ble_ess_service_temperature_update(ble_ess_service_t * p_ess_service, float *temperture)
 {
     if (p_ess_service == NULL)
     {
@@ -211,13 +214,14 @@ uint32_t ble_ess_service_temperature_update(ble_ess_service_t * p_ess_service, u
 
     uint32_t err_code = NRF_SUCCESS;
     ble_gatts_value_t gatts_value;
+    int16_t temperatureToWriteToCharacteristic = (int16_t)(*temperture * 100.0f);
 
     // Initialize value struct.
     memset(&gatts_value, 0, sizeof(gatts_value));
 
-    gatts_value.len     = custom_value_length*sizeof(uint8_t);
+    gatts_value.len     = sizeof(int16_t);
     gatts_value.offset  = 0;
-    gatts_value.p_value = custom_value;
+    gatts_value.p_value = (uint8_t*)&temperatureToWriteToCharacteristic;
 
     // Update database.
     err_code= sd_ble_gatts_value_set(p_ess_service->conn_handle,
@@ -251,13 +255,12 @@ uint32_t ble_ess_service_temperature_update(ble_ess_service_t * p_ess_service, u
     return err_code;
 }
 
-
 /**@brief Function for handling the ess Service Service events.
  *
  * @details This function will be called for all ess Service events which are passed to
  *          the application.
  *
- * @param[in]   p_ess_service  ess Service structure.
+ * @param[in]   p_ess_service  Environmental Sensor Service Service structure.
  * @param[in]   p_evt          Event received from the ess Service.
  *
  */
@@ -284,7 +287,7 @@ void ble_ess_on_ess_evt(ble_ess_service_t * p_ess_service, ble_ess_evt_t * p_evt
     }
 }
 
-uint32_t ble_ess_service_temperature_set(uint8_t *custom_value, uint8_t custom_value_length)
+uint32_t ble_ess_service_temperature_set(float *temperature)
 {
-    return ble_ess_service_temperature_update(&m_ess, custom_value, custom_value_length); 
+    return ble_ess_service_temperature_update(&m_ess, temperature); 
 }

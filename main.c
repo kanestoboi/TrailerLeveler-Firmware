@@ -104,11 +104,8 @@ static void notification_timeout_handler(void * p_context)
         if(mpu6050_ReadTemp(&mpu6050Sensor, &temperatureValue))
         {
             float scaledTemperature = ((float)temperatureValue / 340.0) + 36.53;
-            int16_t temperatureScaledToBleChar = (int16_t)(scaledTemperature*100.0);
-            //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(scaledTemperature) );
-            NRF_LOG_RAW_INFO("TEMp: %d\n", temperatureScaledToBleChar); // if reading was unsuccessful then let the user know about it
-            NRF_LOG_FLUSH();
-            ble_ess_service_temperature_set(&temperatureScaledToBleChar, 2);
+            NRF_LOG_RAW_INFO("temp:" NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(scaledTemperature) ); // display the read values
+            ble_ess_service_temperature_set(&scaledTemperature);
         }
     }
     else if (adxl355Sensor.initialised)

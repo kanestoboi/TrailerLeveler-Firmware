@@ -921,11 +921,11 @@ uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t cus
     myFloat[1] = mLastAnglesFromSensor[1] -  calibrationAngles[1];
     myFloat[2] = mLastAnglesFromSensor[2] -  calibrationAngles[2];
 
-    NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[0]) ); // display the read values
-    NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[1]) ); // display the read values
-    NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(myFloat[2]) ); // display the read values
+    // NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[0]) ); // display the read values
+    // NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[1]) ); // display the read values
+    // NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(myFloat[2]) ); // display the read values
 
-    NRF_LOG_RAW_INFO("\n");
+    // NRF_LOG_RAW_INFO("\n");
     NRF_LOG_FLUSH();
 
     return ble_accelerometer_service_angles_update(&m_accelerometer, (uint8_t *)myFloat, custom_value_length); 
