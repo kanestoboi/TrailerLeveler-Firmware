@@ -24,6 +24,7 @@
 #include "Components/LED/nrf_buddy_led.h"
 #include "Components/Bluetooth/Bluetooth.h"
 #include "Components/Bluetooth/Services/AccelerometerService.h"
+#include "Components/Bluetooth/Services/EnvironmentalService.h"
 
 APP_TIMER_DEF(m_notification_timer_id);
 
@@ -62,7 +63,7 @@ static void notification_timeout_handler(void * p_context)
     ret_code_t err_code;
     // create arrays which will hold x,y & z co-ordinates values of acc
 
-    static uint16_t tempValue;
+    
 
     // Increment the value of m_custom_value before nortifing it.
     if (mpu6050Sensor.initialised)
@@ -77,8 +78,6 @@ static void notification_timeout_handler(void * p_context)
             float xGs = map((uint32_t)xoutput, -32768, 32767, -90, 90);
             float yGs = map((uint32_t)youtput, -32768, 32767, -90, 90);
             float zGs = map((uint32_t)zoutput, -32768, 32767, -90, 90);
-
-            
 
             float angles[3];
 
@@ -99,6 +98,14 @@ static void notification_timeout_handler(void * p_context)
         {
             NRF_LOG_RAW_INFO("Reading ACC values Failed!!!\n"); // if reading was unsuccessful then let the user know about it
             NRF_LOG_FLUSH();
+        }
+
+        static int16_t temperatureValue;
+        if(mpu6050_ReadTemp(&mpu6050Sensor, &temperatureValue))
+        {
+            float scaledTemperature = ((float)temperatureValue / 340.0) + 36.53;
+            NRF_LOG_RAW_INFO("temp:" NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(scaledTemperature) ); // display the read values
+            ble_ess_service_temperature_set(&scaledTemperature);
         }
     }
     else if (adxl355Sensor.initialised)

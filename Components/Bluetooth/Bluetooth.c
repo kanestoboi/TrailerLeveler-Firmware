@@ -32,7 +32,9 @@
 #include "nrf_dfu_settings.h"
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
+
 #include "Services/AccelerometerService.h"
+#include "Services/EnvironmentalService.h"
 
 // DFU-related #includes
 #include "nrf_power.h"
@@ -217,8 +219,6 @@ static void ble_dfu_buttonless_evt_handler(ble_dfu_buttonless_evt_type_t event)
     }
 }
 
-
-
 // Use UUIDs for service(s) used in your application.
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
@@ -279,7 +279,6 @@ static void gap_params_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
 /**@brief Function for initializing the GATT module.
  */
 static void gatt_init(void)
@@ -287,7 +286,6 @@ static void gatt_init(void)
     ret_code_t err_code = nrf_ble_gatt_init(&m_gatt, NULL);
     APP_ERROR_CHECK(err_code);
 }
-
 
 /**@brief Function for handling Queued Write Module errors.
  *
@@ -300,7 +298,6 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
 {
     APP_ERROR_HANDLER(nrf_error);
 }
-
 
 /**@brief Function for initializing services that will be used by the application.
  */
@@ -358,9 +355,10 @@ static void services_init(void)
     dis_init.dis_char_rd_sec = SEC_OPEN;
     APP_ERROR_CHECK(ble_dis_init(&dis_init));
     #endif
-    //*/
-}
+    
+    bluetooth_initialise_ess_service();
 
+}
 
 /**@brief Function for handling the Connection Parameters Module.
  *
@@ -393,7 +391,6 @@ static void conn_params_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
-
 /**@brief Function for initializing the Connection Parameters module.
  */
 static void conn_params_init(void)
@@ -415,7 +412,6 @@ static void conn_params_init(void)
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
 }
-
 
 /**@brief Function for handling advertising events.
  *
@@ -445,7 +441,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
             break;
     }
 }
-
 
 /**@brief Function for handling BLE events.
  *
@@ -505,7 +500,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     }
 }
 
-
 /**@brief Function for initializing the BLE stack.
  *
  * @details Initializes the SoftDevice and the BLE event interrupt.
@@ -530,7 +524,6 @@ static void ble_stack_init(void)
     // Register a handler for BLE events.
     NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
 }
-
 
 /**@brief Function for the Peer Manager initialization.
  */
@@ -564,7 +557,6 @@ static void peer_manager_init(void)
     err_code = pm_register(pm_evt_handler);
     APP_ERROR_CHECK(err_code);
 }
-
 
 /**@brief Clear bond information from persistent storage.
  */
@@ -606,8 +598,6 @@ static void advertising_init(void)
 
     ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 }
-
-
 
 /**@brief Function for handling the idle state (main loop).
  *
@@ -651,6 +641,12 @@ void bluetooth_initialise_accelerometer_service(accelerometer_t accelerometerTyp
     accelerometer_service_init.evt_handler = ble_accelerometer_on_accelerometer_evt;
 
     ret_code_t err_code = ble_acceleration_service_init(&m_accelerometer, &accelerometer_service_init, accelerometerType);
+    APP_ERROR_CHECK(err_code);
+}
+
+void bluetooth_initialise_ess_service()
+{
+    ret_code_t err_code = ble_ess_service_init();
     APP_ERROR_CHECK(err_code);
 }
 
