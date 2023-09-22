@@ -47,27 +47,27 @@ typedef struct ble_ess_service_s ble_ess_service_t;
 
 typedef enum
 {
-    BLE_ESS_EVT_NOTIFICATION_ENABLED,                             /**< Custom value notification enabled event. */
-    BLE_ESS_EVT_NOTIFICATION_DISABLED,                            /**< Custom value notification disabled event. */
+    BLE_ESS_EVT_NOTIFICATION_ENABLED,
+    BLE_ESS_EVT_NOTIFICATION_DISABLED,                        
     BLE_ESS_EVT_DISCONNECTED,
     BLE_ESS_EVT_CONNECTED
 } ble_ess_evt_type_t;
 
-/**@brief Custom Service event. */
+/**@brief ESS BLE Service event. */
 typedef struct
 {
-    ble_ess_evt_type_t evt_type;                                  /**< Type of event. */
+    ble_ess_evt_type_t evt_type;
 } ble_ess_evt_t;
 
-/**@brief Custom Service event handler type. */
+/**@brief ESS Service event handler type. */
 typedef void (*ble_ess_evt_handler_t) (ble_ess_service_t * p_ess_service, ble_ess_evt_t * p_evt);
 
-/**@brief Custom Service init structure. This contains all options and data needed for
+/**@brief ESS init structure. This contains all options and data needed for
  *        initialization of the service.*/
 typedef struct
 {
-    ble_ess_evt_handler_t         evt_handler;                    /**< Event handler to be called for handling events in the Custom Service. */
-    uint8_t                       initial_custom_value;           /**< Initial custom value */
+    ble_ess_evt_handler_t         evt_handler;                      /**< Event handler to be called for handling events in the Custom Service. */
+    uint8_t                       initial_custom_value;             /**< Initial custom value */
     ble_srv_cccd_security_mode_t  ess_temperature_char_attr_md;     /**< Initial security level for Custom characteristics attribute */
 } ble_ess_service_init_t;
 
