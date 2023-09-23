@@ -193,7 +193,10 @@ void bluetooth_advertising_timeout_callback(void)
         // Enable wakeup from pin P0.31
         nrf_gpio_cfg_sense_input(31, NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_SENSE_HIGH);
 
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x28); // Set MPU6050 cycle between sleep mode and wake up mode
+        mpu6050_SetCycleEnabled(&mpu6050Sensor, true);
+        mpu6050_SetCycleFrequency(&mpu6050Sensor, WAKE_UP_1_25_HZ);
+        mpu6050_SetTemperatureDisabled(&mpu6050Sensor, true);
+        
         mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT2_REG , 0x03); // Sets the wake up period to be 5 Hz
         mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x00);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
         mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG , 0x00);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
@@ -334,7 +337,8 @@ void twi_master_init(void)
     nrf_drv_twi_enable(&m_twi);
 }
 
-/**@brief Function for application main entry.
+/**@brief Function for application main en
+try.
  */
 int main(void)
 {
@@ -394,7 +398,10 @@ int main(void)
 
     if (mpu6050Sensor.initialised)
     {
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_PWR_MGMT1_REG , 0x00);   // Set accelerometer, gyro, and temperature sensor to be on
+        mpu6050_SetSleepDisabled(&mpu6050Sensor, false);        // Enable accelerometer and gyro
+        mpu6050_SetTemperatureDisabled(&mpu6050Sensor, false);  // Enable temperature sensor
+        mpu6050_SetCycleEnabled(&mpu6050Sensor, false);         // Enable temperature sensor
+       
         mpu6050_register_write(&mpu6050Sensor, MPU6050_SAMPLE_RATE_REG , 0x07); // Set sample rate divider to be 7. Sample rate = 1,000 / (1+7) = 125 (Same sample may be received in FIFO twice)
         mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
         mpu6050_EnableInterrupt(&mpu6050Sensor, DISABLE_ALL_INTERRUPTS);        // Disable Interrupts
