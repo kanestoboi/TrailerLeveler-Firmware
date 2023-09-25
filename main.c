@@ -67,7 +67,17 @@ static void notification_timeout_handler(void * p_context)
 
     // Increment the value of m_custom_value before nortifing it.
     if (mpu6050Sensor.initialised)
-    {
+    {   
+        float temperatureDegreesC;     
+        float savedTemperature = 27.45;
+        static int16_t temperatureValue;
+        if(mpu6050_ReadTemp(&mpu6050Sensor, &temperatureValue))
+        {
+            temperatureDegreesC = ((float)temperatureValue / 340.0) + 36.53;
+            
+            ble_ess_service_temperature_set(&temperatureDegreesC);
+        }
+
         static int16_t AccValue[3];
         if(mpu6050_ReadAcc(&mpu6050Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
@@ -98,14 +108,6 @@ static void notification_timeout_handler(void * p_context)
         {
             NRF_LOG_RAW_INFO("Reading ACC values Failed!!!\n"); // if reading was unsuccessful then let the user know about it
             NRF_LOG_FLUSH();
-        }
-
-        static int16_t temperatureValue;
-        if(mpu6050_ReadTemp(&mpu6050Sensor, &temperatureValue))
-        {
-            float scaledTemperature = ((float)temperatureValue / 340.0) + 36.53;
-            NRF_LOG_RAW_INFO("temp:" NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(scaledTemperature) ); // display the read values
-            ble_ess_service_temperature_set(&scaledTemperature);
         }
     }
     else if (adxl355Sensor.initialised)
@@ -202,12 +204,14 @@ void bluetooth_advertising_timeout_callback(void)
         mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG , 0x00);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
 
         // Setup the wakeup interrupt on the MPU6050 
-        mpu6050_SetMotionDetectionThreshold(&mpu6050Sensor, 1);   
-        mpu6050_SetMotionDetectionDuration(&mpu6050Sensor, 0x01);
+        mpu6050_setMotionDetectionDurationThreshold(&mpu6050Sensor, 1);   
+        mpu6050_setMotionDurationCounterThreshold(&mpu6050Sensor, 0x01);
         mpu6050_SetAccelerometerPowerOnDelay(&mpu6050Sensor, 0);
         mpu6050_SetFreefallDetectionCounterDecrement(&mpu6050Sensor, 1);
         mpu6050_SetMotionDetectionCounterDecrement(&mpu6050Sensor, 1);
-        mpu6050_EnableInterrupt(&mpu6050Sensor, MOT_EN | FF_EN); 
+        mpu6050_setMotionDetectionInterruptEnabled(&mpu6050Sensor, true);
+        mpu6050_setFreeFallInterruptEnabled(&mpu6050Sensor, true);
+ 
     }
 
 #ifdef DEBUG_NRF
@@ -400,12 +404,15 @@ int main(void)
     {
         mpu6050_SetSleepDisabled(&mpu6050Sensor, false);        // Enable accelerometer and gyro
         mpu6050_SetTemperatureDisabled(&mpu6050Sensor, false);  // Enable temperature sensor
-        mpu6050_SetCycleEnabled(&mpu6050Sensor, false);         // Enable temperature sensor
-       
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_SAMPLE_RATE_REG , 0x07); // Set sample rate divider to be 7. Sample rate = 1,000 / (1+7) = 125 (Same sample may be received in FIFO twice)
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
-        mpu6050_EnableInterrupt(&mpu6050Sensor, DISABLE_ALL_INTERRUPTS);        // Disable Interrupts
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG, 0x04); // Configure the DHPF available in the path leading to motion detectors to 0.63Hz
+        mpu6050_SetCycleEnabled(&mpu6050Sensor, false);         // Disable cycling from off to on
+
+        mpu6050_setSampleRateDivider(&mpu6050Sensor, 7);                        // Set sample rate divider to be 7. Sample rate = 1,000 / (1+7) = 125 (Same sample may be received in FIFO twice)
+        mpu6050_setDLPFConfig(&mpu6050Sensor, MPU6050_DLPF_BW_5_HZ);            // Configure the DLPF
+        mpu6050_setAccelerometerHPF(&mpu6050Sensor, MPU6050_Accel_HPF_0_63HZ);  // Configure the DHPF available in the path leading to motion detectors to 0.63Hz
+        mpu6050_setXAccelerometerEnabled(&mpu6050Sensor, false);
+        mpu6050_setYAccelerometerEnabled(&mpu6050Sensor, false);
+        mpu6050_setZAccelerometerEnabled(&mpu6050Sensor, false);
+        mpu6050_SetClockSource(&mpu6050Sensor, MPU6050_Clock_Source_Internal);
 
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);      // Add accelerometer service to ble
 
