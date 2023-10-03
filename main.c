@@ -25,6 +25,7 @@
 #include "Components/Bluetooth/Bluetooth.h"
 #include "Components/Bluetooth/Services/AccelerometerService.h"
 #include "Components/Bluetooth/Services/EnvironmentalService.h"
+#include "Components/USBSerial/USBSerial.h"
 
 APP_TIMER_DEF(m_notification_timer_id);
 
@@ -35,7 +36,7 @@ APP_TIMER_DEF(m_notification_timer_id);
 #define TWI_SCL_M           6         //I2C SCL Pin
 #define TWI_SDA_M           8        //I2C SDA Pin
 
-#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(80)
+#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(5)
 
 // Create a Handle for the twi communication
 const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
@@ -57,13 +58,13 @@ float map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high
  * @param[in] p_context  Pointer used for passing some arbitrary information (context) from the
  *                       app_start_timer() call to the timeout handler.
  */
-static void notification_timeout_handler(void * p_context)
+static void read_accelerometer_timeout_handler(void * p_context)
 {
     UNUSED_PARAMETER(p_context);
     ret_code_t err_code;
     // create arrays which will hold x,y & z co-ordinates values of acc
 
-    
+
 
     // Increment the value of m_custom_value before nortifing it.
     if (mpu6050Sensor.initialised)
@@ -81,9 +82,9 @@ static void notification_timeout_handler(void * p_context)
         static int16_t AccValue[3];
         if(mpu6050_ReadAcc(&mpu6050Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
-            xoutput = (0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
-            youtput = (0.9396f * youtput + 0.0604 * (float)AccValue[1]);
-            zoutput = (0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
+            xoutput = (0.9896f * xoutput + 0.0104 * (float)AccValue[0]);
+            youtput = (0.9896f * youtput + 0.0104 * (float)AccValue[1]);
+            zoutput = (0.9896f * zoutput + 0.0104 * (float)AccValue[2]);
 
             float xGs = map((uint32_t)xoutput, -32768, 32767, -90, 90);
             float yGs = map((uint32_t)youtput, -32768, 32767, -90, 90);
@@ -92,6 +93,11 @@ static void notification_timeout_handler(void * p_context)
             float angles[3];
 
             calculateAnglesFromDeviceOrientation(xGs, yGs, zGs, angles);
+
+            
+            USBSerial_WriteBlocking(&angles, sizeof(angles));
+
+
 
             /*NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[0]) ); // display the read values
             NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[1]) ); // display the read values
@@ -175,7 +181,10 @@ static void timers_init(void)
     APP_ERROR_CHECK(err_code);
 
     
-    err_code = app_timer_create(&m_notification_timer_id, APP_TIMER_MODE_REPEATED, notification_timeout_handler);
+    err_code = app_timer_create(&m_notification_timer_id, APP_TIMER_MODE_REPEATED, read_accelerometer_timeout_handler);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_create(&m_notification_timer_id, APP_TIMER_MODE_REPEATED, read_accelerometer_timeout_handler);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -374,10 +383,14 @@ int main(void)
     nrf_buddy_leds_init();              // initialise nRF52 buddy leds library
     power_management_init();            // initialise the nRF5 power management library
 
+    USBSerial_Init();
+
     bluetooth_init();
     bluetooth_advertising_start(erase_bonds);
     NRF_LOG_INFO("Bluetooth setup complete");
     NRF_LOG_FLUSH();
+
+
 
     if (max17260_init(&max17260Sensor, &m_twi))
     {
@@ -439,6 +452,7 @@ int main(void)
     for (;;)
     {
         bluetooth_idle_state_handle();
+        USBSerial_Process();
     }
 }
 

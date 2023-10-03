@@ -85,6 +85,10 @@
           filter="*.*"
           path="Components/SavedParameters"
           recurse="No" />
+        <folder Name="USBSerial">
+          <file file_name="Components/USBSerial/USBSerial.c" />
+          <file file_name="Components/USBSerial/USBSerial.h" />
+        </folder>
       </folder>
       <file file_name="main.c" />
       <file file_name="sdk_config.h" />
@@ -139,16 +143,19 @@
     </folder>
     <folder Name="nRF_Drivers">
       <file file_name="../nRF5_SDK_current/integration/nrfx/legacy/nrf_drv_clock.c" />
+      <file file_name="../nRF5_SDK_Current/integration/nrfx/legacy/nrf_drv_power.c" />
       <file file_name="../nRF5_SDK_Current/integration/nrfx/legacy/nrf_drv_twi.c" />
       <file file_name="../nRF5_SDK_current/integration/nrfx/legacy/nrf_drv_uart.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/soc/nrfx_atomic.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_clock.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_gpiote.c" />
+      <file file_name="../nRF5_SDK_Current/modules/nrfx/drivers/src/nrfx_power.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/prs/nrfx_prs.c" />
       <file file_name="../nRF5_SDK_Current/modules/nrfx/drivers/src/nrfx_saadc.c" />
       <file file_name="../nRF5_SDK_Current/modules/nrfx/drivers/src/nrfx_twi.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="../nRF5_SDK_current/modules/nrfx/drivers/src/nrfx_uarte.c" />
+      <file file_name="../nRF5_SDK_Current/modules/nrfx/drivers/src/nrfx_usbd.c" />
     </folder>
     <folder Name="nRF_Libraries">
       <file file_name="../nRF5_SDK_current/components/libraries/button/app_button.c" />
@@ -157,6 +164,11 @@
       <file file_name="../nRF5_SDK_current/components/libraries/util/app_error_weak.c" />
       <file file_name="../nRF5_SDK_current/components/libraries/scheduler/app_scheduler.c" />
       <file file_name="../nRF5_SDK_current/components/libraries/timer/app_timer2.c" />
+      <file file_name="../nRF5_SDK_Current/components/libraries/usbd/app_usbd.c" />
+      <file file_name="../nRF5_SDK_Current/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c" />
+      <file file_name="../nRF5_SDK_Current/components/libraries/usbd/app_usbd_core.c" />
+      <file file_name="../nRF5_SDK_Current/components/libraries/usbd/app_usbd_serial_num.c" />
+      <file file_name="../nRF5_SDK_Current/components/libraries/usbd/app_usbd_string_desc.c" />
       <file file_name="../nRF5_SDK_current/components/libraries/util/app_util_platform.c" />
       <file file_name="../nRF5_SDK_current/components/libraries/crc16/crc16.c" />
       <file file_name="../nRF5_SDK_current/components/libraries/timer/drv_rtc.c" />
