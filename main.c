@@ -119,14 +119,18 @@ static void notification_timeout_handler(void * p_context)
              * connected to the trailer leveler. The error code is not used.
             */
 
+            xoutput = (0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
+            youtput = (0.9396f * youtput + 0.0604 * (float)AccValue[1]);
+            zoutput = (0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
+
             /*
             float xGs = 9.81f*0.00000390625f * ((float)AccValue[0]);
             float yGs = 9.81f*0.00000390625f * ((float)AccValue[1]);
             float zGs = 9.81f*0.00000390625f * ((float)AccValue[2]);*/
 
-            float xGs = map(AccValue[0], -262144, 262143, -90, 90);
-            float yGs = map(AccValue[1], -262144, 262143, -90, 90);
-            float zGs = map(AccValue[2], -262144, 262143, -90, 90);
+            float xGs = map(xoutput, -524286, 524286, -90, 90);
+            float yGs = map(youtput, -524286, 524286, -90, 90);
+            float zGs = map(zoutput, -524286, 524286, -90, 90);
 
             float angles[3];
 
@@ -141,6 +145,15 @@ static void notification_timeout_handler(void * p_context)
 
             ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)12);
             ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);
+
+            uint16_t tempValue;
+            adxl355_ReadTemp(&adxl355Sensor, &tempValue);
+
+            float temp = -0.11049723765f * ((float)tempValue - 1852.0f) + 25.0f;
+
+            ble_ess_service_temperature_set(&temp);
+
+            // NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
         }
     }
 
