@@ -50,6 +50,60 @@ int32_t zoutput = 0;
 
 float map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2);
 
+void initialise_accelerometer()
+{
+    // Set ADXL355 to be in I2C mode
+    nrf_gpio_cfg_output(40);
+    nrf_gpio_pin_clear(40);
+
+    // Set ADXL355 to have address 0x1D    
+    nrf_gpio_cfg_output(7);
+    nrf_gpio_pin_clear(7);
+
+    if (mpu6050Sensor.initialised)
+    {
+        mpu6050_SetSleepDisabled(&mpu6050Sensor, false);        // Enable accelerometer and gyro
+        mpu6050_SetTemperatureDisabled(&mpu6050Sensor, false);  // Enable temperature sensor
+        mpu6050_SetCycleEnabled(&mpu6050Sensor, false);         // Enable temperature sensor
+       
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_SAMPLE_RATE_REG , 0x07); // Set sample rate divider to be 7. Sample rate = 1,000 / (1+7) = 125 (Same sample may be received in FIFO twice)
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
+        mpu6050_EnableInterrupt(&mpu6050Sensor, DISABLE_ALL_INTERRUPTS);        // Disable Interrupts
+        mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG, 0x04); // Configure the DHPF available in the path leading to motion detectors to 0.63Hz
+
+        NRF_LOG_INFO("MPU6050 setup complete");
+    }
+    else if (adxl355Sensor.initialised)
+    {
+        adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
+        adxl355_setFilterSettings(&adxl355Sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
+        adxl355_setRange(&adxl355Sensor, ADXL_RANGE_2G);
+
+        NRF_LOG_INFO("ADXL355 setup complete");
+    }
+
+    NRF_LOG_FLUSH();
+
+    
+    ret_code_t err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
+    APP_ERROR_CHECK(err_code);
+}
+
+void shutdown_accelerometer()
+{
+    NRF_LOG_INFO("Shutting down accelerometer");
+    NRF_LOG_FLUSH();
+    if (mpu6050Sensor.initialised)
+    {
+        mpu6050_SetTemperatureDisabled(&mpu6050Sensor, true);
+        mpu6050_SetSleepDisabled(&mpu6050Sensor, true);
+    }
+
+    ret_code_t err_code = app_timer_stop(m_notification_timer_id);
+    APP_ERROR_CHECK(err_code);
+
+}
+
 /**@brief Function for handling the Accelerometer measurement timer timeout.
  *
  * @details This function will be called each time the accelerometer level measurement timer expires.
@@ -104,7 +158,7 @@ static void notification_timeout_handler(void * p_context)
         if(mpu6050_ReadTemp(&mpu6050Sensor, &temperatureValue))
         {
             float scaledTemperature = ((float)temperatureValue / 340.0) + 36.53;
-            NRF_LOG_RAW_INFO("temp:" NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(scaledTemperature) ); // display the read values
+            //NRF_LOG_RAW_INFO("temp:" NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(scaledTemperature) ); // display the read values
             ble_ess_service_temperature_set(&scaledTemperature);
         }
     }
@@ -348,18 +402,7 @@ int main(void)
 
     // Initialize the nRF logger. Log messages are sent out the RTT interface
     log_init();
-
-    // Set ADXL355 to be in I2C mode
-    nrf_gpio_cfg_output(40);
-    nrf_gpio_pin_clear(40);
-
-    // Set ADXL355 to have address 0x1D    
-    nrf_gpio_cfg_output(7);
-    nrf_gpio_pin_clear(7);
-
-    // Set the charge state pin to be an input    
-    nrf_gpio_cfg_input(41, GPIO_PIN_CNF_PULL_Disabled);
-
+    
     // Start execution.
     NRF_LOG_INFO("Trailer Leveler Started.");
     NRF_LOG_INFO("Initilising Firmware...");
@@ -385,48 +428,25 @@ int main(void)
     }
 
     // Try to find an accelerometer sensor on the TWI bus
-    while(adxl355_init(&adxl355Sensor, &m_twi) == false &&
-          mpu6050_init(&mpu6050Sensor, &m_twi) == false) 
+    if (adxl355_init(&adxl355Sensor, &m_twi))
     {
-        NRF_LOG_INFO("Failed to initialise an IMU...retrying"); // if it failed to initialize then print a message
-        nrf_delay_ms(200);
-        NRF_LOG_FLUSH();
+       bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
+       NRF_LOG_INFO("ADXL initialised"); // if it failed to initialize then print a message
+    }
+    else if (mpu6050_init(&mpu6050Sensor, &m_twi))
+    {
+        bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
+        NRF_LOG_INFO("MPU initialised"); // if it failed to initialize then print a message
     }
 
-    NRF_LOG_INFO("Found Sensor"); // Found an accelerometer sensor
+    bluetooth_register_connected_callback(initialise_accelerometer);
+    bluetooth_register_disconnected_callback(shutdown_accelerometer);
+
+
     NRF_LOG_FLUSH();
-
-    if (mpu6050Sensor.initialised)
-    {
-        mpu6050_SetSleepDisabled(&mpu6050Sensor, false);        // Enable accelerometer and gyro
-        mpu6050_SetTemperatureDisabled(&mpu6050Sensor, false);  // Enable temperature sensor
-        mpu6050_SetCycleEnabled(&mpu6050Sensor, false);         // Enable temperature sensor
-       
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_SAMPLE_RATE_REG , 0x07); // Set sample rate divider to be 7. Sample rate = 1,000 / (1+7) = 125 (Same sample may be received in FIFO twice)
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
-        mpu6050_EnableInterrupt(&mpu6050Sensor, DISABLE_ALL_INTERRUPTS);        // Disable Interrupts
-        mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG, 0x04); // Configure the DHPF available in the path leading to motion detectors to 0.63Hz
-
-        bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);      // Add accelerometer service to ble
-
-        NRF_LOG_INFO("MPU6050 setup complete");
-    }
-    else if (adxl355Sensor.initialised)
-    {
-        adxl355_setPowerControl(&adxl355Sensor, ADXL355_POWER_CONTROL_FLAG_MEASUREMENT_MODE);
-        adxl355_setFilterSettings(&adxl355Sensor, ADXL355_ODR_LPF_15_625HZ_3_906HZ);
-        adxl355_setRange(&adxl355Sensor, ADXL_RANGE_2G);
-
-        bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
-        NRF_LOG_INFO("ADXL355 setup complete");
-    }
-    NRF_LOG_FLUSH();
-
-    err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
-    APP_ERROR_CHECK(err_code);
 
     // Keeping this LED on as a visual indicator that the accelerometer has been found        
-    nrf_buddy_led_on(3);
+    //nrf_buddy_led_on(3);
 
     // Enter main loop.
     for (;;)
