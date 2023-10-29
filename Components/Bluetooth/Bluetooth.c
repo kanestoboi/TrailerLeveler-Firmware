@@ -47,9 +47,9 @@
 
 #define DEVICE_NAME                     "Trailer Leveler"                       /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "Kane"                                  /**< Manufacturer. Will be passed to Device Information Service. */
-#define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+#define APP_ADV_INTERVAL                2000                                    /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
-#define APP_ADV_DURATION                65535                                   /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
+#define APP_ADV_DURATION                0                                       /**< The advertising duration in units of 10 milliseconds. 0 means there is no timeout*/
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
@@ -75,6 +75,16 @@
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
 
+// Maximum number of registered functions.
+#define MAX_FUNCTIONS 10
+
+// Array to store registered functions.
+ConnectedCallbackFunctionPointer connectedCallbackFunctionRegistry[MAX_FUNCTIONS];
+DisconnectedCallbackFunctionPointer disconnectedCallbackFunctionRegistry[MAX_FUNCTIONS];
+
+int numRegisteredConnectedCallbackFunctions = 0;
+int numRegisteredDisconnectedCallbackFunctions = 0;
+
 
 // Private Functions
 static bool app_shutdown_handler(nrf_pwr_mgmt_evt_t event);
@@ -95,6 +105,9 @@ static void ble_stack_init(void);
 static void peer_manager_init(void);
 static void delete_bonds(void);
 static void advertising_init(void);
+static void bluetooth_call_connected_callback_registered_functions();
+static void bluetooth_call_disconnected_callback_registered_functions();
+
 
 BLE_BAS_DEF(m_bas);                                                     /**< Structure used to identify the battery service. */
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
@@ -428,7 +441,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
         case BLE_ADV_EVT_FAST:
             NRF_LOG_INFO("Fast advertising.");
             err_code = nrf_buddy_led_indication(NRF_BUDDY_INDICATE_ADVERTISING);
-            APP_ERROR_CHECK(err_code);
+            //APP_ERROR_CHECK(err_code);
             break;
 
         case BLE_ADV_EVT_IDLE:
@@ -455,6 +468,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     {
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected.");
+            bluetooth_call_disconnected_callback_registered_functions();
 
             break;
 
@@ -464,6 +478,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
+            bluetooth_call_connected_callback_registered_functions();
+
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -656,4 +672,38 @@ void bluetooth_update_battery_level(uint8_t batteryLevel)
     err_code = ble_bas_battery_level_update(&m_bas, batteryLevel, BLE_CONN_HANDLE_ALL);
 }
 
+// Function to register other functions.
+void bluetooth_register_connected_callback(ConnectedCallbackFunctionPointer func) {
+    if (numRegisteredConnectedCallbackFunctions < MAX_FUNCTIONS) {
+        connectedCallbackFunctionRegistry[numRegisteredConnectedCallbackFunctions] = func;
+        numRegisteredConnectedCallbackFunctions++;
+    } else {
+        //printf("Function registry is full. Cannot add more functions.\n");
+    }
+}
 
+// Function to register other functions.
+void bluetooth_register_disconnected_callback(DisconnectedCallbackFunctionPointer func) {
+    if (numRegisteredDisconnectedCallbackFunctions < MAX_FUNCTIONS) {
+        disconnectedCallbackFunctionRegistry[numRegisteredDisconnectedCallbackFunctions] = func;
+        numRegisteredDisconnectedCallbackFunctions++;
+    } else {
+        //printf("Function registry is full. Cannot add more functions.\n");
+    }
+}
+
+// Function to call all registered functions.
+void bluetooth_call_connected_callback_registered_functions() {
+    for (int i = 0; i < numRegisteredConnectedCallbackFunctions; i++) {
+        ConnectedCallbackFunctionPointer func = connectedCallbackFunctionRegistry[i];
+        func();
+    }
+}
+
+// Function to call all registered functions.
+void bluetooth_call_disconnected_callback_registered_functions() {
+    for (int i = 0; i < numRegisteredDisconnectedCallbackFunctions; i++) {
+        DisconnectedCallbackFunctionPointer func = disconnectedCallbackFunctionRegistry[i];
+        func();
+    }
+}
