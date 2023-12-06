@@ -143,6 +143,10 @@ uint32_t accelerometer_sensor_data_char_add(ble_accelerometer_service_t * p_acce
     {
       ble_uuid.uuid = ACCELEROMETER_MPU6050_VALUE_CHAR_UUID;
     }
+    else if (accelerometer == ACCELEROMETER_BMI270)
+    {
+      ble_uuid.uuid = ACCELEROMETER_BMI270_VALUE_CHAR_UUID;
+    }
 
     memset(&attr_char_value, 0, sizeof(attr_char_value));
 
@@ -155,7 +159,7 @@ uint32_t accelerometer_sensor_data_char_add(ble_accelerometer_service_t * p_acce
     {
       attr_char_value.max_len   = 12*sizeof(uint8_t);
     }
-    else if (accelerometer == ACCELEROMETER_MPU6050)
+    else if (accelerometer == ACCELEROMETER_MPU6050 || accelerometer == ACCELEROMETER_BMI270)
     {
       attr_char_value.max_len   = 6*sizeof(uint8_t);
     }
