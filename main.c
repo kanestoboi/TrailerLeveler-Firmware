@@ -15,10 +15,11 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_delay.h"
-#include "nrf_drv_twi.h"
+#include "nrfx_twi.h"
 
 #include "Components/Accelerometers/ADXL355/adxl355.h"
 #include "Components/Accelerometers/MPU6050/mpu6050.h"
+#include "Components/Accelerometers/BMI270/bmi270.h"
 #include "Components/Accelerometers/Accelerometers.h"
 #include "Components/FuelGauge/MAX17260/max17260.h"
 #include "Components/LED/nrf_buddy_led.h"
@@ -38,10 +39,11 @@ APP_TIMER_DEF(m_notification_timer_id);
 #define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(80)
 
 // Create a Handle for the twi communication
-const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
+const nrfx_twi_t m_twi = NRFX_TWI_INSTANCE(TWI_INSTANCE_ID);
 
 MPU6050 mpu6050Sensor;
 ADXL355 adxl355Sensor;
+BMI270 bmi270Sensor;
 MAX17260 max17260Sensor;
 
 int32_t xoutput = 0;
@@ -80,6 +82,25 @@ void initialise_accelerometer()
         adxl355_setRange(&adxl355Sensor, ADXL_RANGE_2G);
 
         NRF_LOG_INFO("ADXL355 setup complete");
+    }
+    else if (bmi270Sensor.initialised)
+    {
+        //bmi270_EnableAdvancedPowerSave(&bmi270Sensor, false);
+
+        bmi270_WriteConfig(&bmi270Sensor);
+        nrf_delay_ms(25);
+
+        bmi270_EnableAccelerometer(&bmi270Sensor, true);
+
+
+
+        uint8_t status;
+
+        bmi270_GetInternalStatus(&bmi270Sensor, &status);
+
+        NRF_LOG_INFO("Status %d", status);
+        
+        NRF_LOG_INFO("BMI270 setup complete");
     }
 
     NRF_LOG_FLUSH();
@@ -210,12 +231,47 @@ static void notification_timeout_handler(void * p_context)
             // NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
         }
     }
+    if (bmi270Sensor.initialised)
+    {
+        static int16_t AccValue[3];
+        if(bmi270_ReadAcc(&bmi270Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
+        {
+            xoutput = (0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
+            youtput = (0.9396f * youtput + 0.0604 * (float)AccValue[1]);
+            zoutput = (0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
+
+            float xGs = map((uint32_t)xoutput, -32768, 32767, -90, 90);
+            float yGs = map((uint32_t)youtput, -32768, 32767, -90, 90);
+            float zGs = map((uint32_t)zoutput, -32768, 32767, -90, 90);
+
+            float angles[3];
+
+            calculateAnglesFromDeviceOrientation(xGs, yGs, zGs, angles);
+
+            NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[0]) ); // display the read values
+            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[1]) ); // display the read values
+            NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(angles[2]) ); // display the read values
+
+            NRF_LOG_RAW_INFO("\n");
+            NRF_LOG_FLUSH();
+
+            
+            uint32_t err_code = ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)6);
+            ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);      
+        }
+        else
+        {
+            NRF_LOG_RAW_INFO("Reading ACC values Failed!!!\n"); // if reading was unsuccessful then let the user know about it
+            NRF_LOG_FLUSH();
+        }
+    }
+
 
     float soc;
 
-    max17260_getStateOfCharge(&max17260Sensor, &soc);
+    //max17260_getStateOfCharge(&max17260Sensor, &soc);
 
-    bluetooth_update_battery_level((uint8_t)roundf(soc));
+    //bluetooth_update_battery_level((uint8_t)roundf(soc));
 
 
     /*
@@ -311,23 +367,23 @@ static void power_management_init(void)
 }
 
 //Event Handler for TWI events
-void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
+void twi_handler(nrfx_twi_evt_t const * p_event, void * p_context)
 {
     //Check the event to see what type of event occurred
     switch (p_event->type)
     {
               //If data transmission or receiving is finished
-      	case NRF_DRV_TWI_EVT_DONE:
+      	case NRFX_TWI_EVT_DONE:
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
                     mpu6050Sensor.mTransferDone = true;
+                    bmi270Sensor.mTransferDone = true;
                     break;
 
                 case ADXL355_ADDRESS:
                     adxl355Sensor.mTransferDone = true;
                     break;
-                
                 case MAX17260_ADDRESS:
                     max17260Sensor.mTransferDone = true;
                     break;
@@ -338,11 +394,12 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             }
             break;
 
-        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+        case NRFX_TWI_EVT_ADDRESS_NACK:
            switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
                     mpu6050Sensor.mTransferDone = true;
+                    bmi270Sensor.mTransferDone = true;
                     break;
 
                 case ADXL355_ADDRESS:
@@ -359,11 +416,12 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             }
             break;
 
-        case NRF_DRV_TWI_EVT_DATA_NACK:
+        case NRFX_TWI_EVT_DATA_NACK:
             switch (p_event->xfer_desc.address)
             {
                 case MPU6050_ADDRESS:
                     mpu6050Sensor.mTransferDone = true;
+                    bmi270Sensor.mTransferDone = true;
                     break;
 
                 case ADXL355_ADDRESS:
@@ -380,6 +438,8 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
             }
             break;
     }
+
+    NRF_LOG_FLUSH();
 }
 
 //Initialize the TWI as Master device
@@ -388,20 +448,20 @@ void twi_master_init(void)
     ret_code_t err_code;
 
     // Configure the settings for twi communication
-    const nrf_drv_twi_config_t twi_config = {
+    const nrfx_twi_config_t twi_config = {
        .scl                = TWI_SCL_M,  //SCL Pin
        .sda                = TWI_SDA_M,  //SDA Pin
-       .frequency          = NRF_DRV_TWI_FREQ_400K, //Communication Speed
+       .frequency          = NRF_TWI_FREQ_400K, //Communication Speed
        .interrupt_priority = APP_IRQ_PRIORITY_HIGH, //Interrupt Priority(Note: if using Bluetooth then select priority carefully)
-       .clear_bus_init     = false //automatically clear bus
+       .hold_bus_uninit     = true //automatically clear bus
     };
 
     //A function to initialize the twi communication
-    err_code = nrf_drv_twi_init(&m_twi, &twi_config, twi_handler, NULL);
+    err_code = nrfx_twi_init(&m_twi, &twi_config, twi_handler, NULL);
     APP_ERROR_CHECK(err_code);
     
     //Enable the TWI Communication
-    nrf_drv_twi_enable(&m_twi);
+    nrfx_twi_enable(&m_twi);
 }
 
 /**@brief Function for application main en
@@ -440,18 +500,25 @@ int main(void)
         NRF_LOG_INFO("Value: %X", val);
     }
 
+
     // Try to find an accelerometer sensor on the TWI bus
     if (adxl355_init(&adxl355Sensor, &m_twi))
     {
        bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
-       NRF_LOG_INFO("ADXL initialised"); // if it failed to initialize then print a message
+       NRF_LOG_INFO("ADXL355 initialised"); // if it failed to initialize then print a message
     }
     else if (mpu6050_init(&mpu6050Sensor, &m_twi))
     {
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
-        NRF_LOG_INFO("MPU initialised"); // if it failed to initialize then print a message
+        NRF_LOG_INFO("MPU6050 initialised"); // if it failed to initialize then print a message
     }
-
+    /*
+    else if (bmi270_init(&bmi270Sensor, &m_twi))
+    {
+        bluetooth_initialise_accelerometer_service(ACCELEROMETER_BMI270);
+        NRF_LOG_INFO("BMI270 initialised"); // if it failed to initialize then print a message
+    }*/
+    //initialise_accelerometer();
     bluetooth_register_connected_callback(initialise_accelerometer);
     bluetooth_register_disconnected_callback(shutdown_accelerometer);
 

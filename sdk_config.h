@@ -4369,7 +4369,7 @@
  
 
 #ifndef NRFX_TWI0_ENABLED
-#define NRFX_TWI0_ENABLED 0
+#define NRFX_TWI0_ENABLED 1
 #endif
 
 // <q> NRFX_TWI1_ENABLED  - Enable TWI1 instance

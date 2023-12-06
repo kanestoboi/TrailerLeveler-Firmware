@@ -34,6 +34,7 @@
 #define ACCELEROMETER_ORIENTATION_CHAR_UUID         0x1404
 #define ACCELEROMETER_CALIBRATION_CHAR_UUID         0x1405
 #define ACCELEROMETER_SAVED_HITCH_ANGLE_CHAR_UUID   0x1406
+#define ACCELEROMETER_BMI270_VALUE_CHAR_UUID        0x1407
 
 /**@brief   Macro for defining a ble_accelerometer instance.
  *
