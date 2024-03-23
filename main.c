@@ -497,18 +497,18 @@ int main(void)
     // Try to find an accelerometer sensor on the TWI bus
     if (adxl355_init(&adxl355Sensor, &m_twi))
     {
-       bluetooth_initialise_accelerometer_service(ACCELEROMETER_ADXL355);
+       ble_acceleration_service_init(ACCELEROMETER_ADXL355);
        NRF_LOG_INFO("ADXL355 initialised"); // if it failed to initialize then print a message
     }
     else if (mpu6050_init(&mpu6050Sensor, &m_twi))
     {
-        bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
+        ble_acceleration_service_init(ACCELEROMETER_MPU6050);
         NRF_LOG_INFO("MPU6050 initialised"); // if it failed to initialize then print a message
     }
     
     else if (bmi270_init(&bmi270Sensor, &m_twi))
     {
-        bluetooth_initialise_accelerometer_service(ACCELEROMETER_BMI270);
+        ble_acceleration_service_init(ACCELEROMETER_BMI270);
         NRF_LOG_INFO("BMI270 initialised"); // if it failed to initialize then print a message
     }
     //initialise_accelerometer();

@@ -100,7 +100,7 @@ struct ble_accerometer_service_s
  *
  * @return      NRF_SUCCESS on successful initialization of service, otherwise an error code.
  */
-uint32_t ble_acceleration_service_init(ble_accelerometer_service_t * p_accelerometer_service, const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
+uint32_t ble_acceleration_service_init(const accelerometer_t accelerometer);
 
 /**@brief Function for handling the Application's BLE Stack events.
  *
@@ -144,6 +144,6 @@ uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_
 
 uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
-extern ble_accelerometer_service_t m_accelerometer;
+extern ble_accelerometer_service_t m_accelerometer_service;
 
 #endif /* ACCELEROMETER_SERVICE_H */
