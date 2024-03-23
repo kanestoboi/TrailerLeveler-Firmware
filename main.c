@@ -136,10 +136,6 @@ static void notification_timeout_handler(void * p_context)
 {
     UNUSED_PARAMETER(p_context);
     ret_code_t err_code;
-    // create arrays which will hold x,y & z co-ordinates values of acc
-
-    
-
     // Increment the value of m_custom_value before nortifing it.
     if (mpu6050Sensor.initialised)
     {
@@ -257,7 +253,15 @@ static void notification_timeout_handler(void * p_context)
 
             
             uint32_t err_code = ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)6);
-            ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);      
+            ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);
+
+            float temp;
+
+            bmi270_ReadTemp(&bmi270Sensor, &temp );
+            
+            ble_ess_service_temperature_set(&temp);
+
+            NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));      
         }
         else
         {
@@ -265,23 +269,12 @@ static void notification_timeout_handler(void * p_context)
             NRF_LOG_FLUSH();
         }
     }
-
-
-    float soc;
-
-    //max17260_getStateOfCharge(&max17260Sensor, &soc);
-
-    //bluetooth_update_battery_level((uint8_t)roundf(soc));
-
-
-    /*
-      adxl355_ReadTemp(&sensor, &tempValue);
-
-      float temp = -0.11049723765f * ((float)tempValue - 1852.0f) + 25.0f;
-
-      //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
-*/
-
+    if (&max17260Sensor.initialised)
+    {
+        float soc;
+        max17260_getStateOfCharge(&max17260Sensor, &soc);
+        bluetooth_update_battery_level((uint8_t)roundf(soc));
+    }
 }
 
 
@@ -512,12 +505,12 @@ int main(void)
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_MPU6050);
         NRF_LOG_INFO("MPU6050 initialised"); // if it failed to initialize then print a message
     }
-    /*
+    
     else if (bmi270_init(&bmi270Sensor, &m_twi))
     {
         bluetooth_initialise_accelerometer_service(ACCELEROMETER_BMI270);
         NRF_LOG_INFO("BMI270 initialised"); // if it failed to initialize then print a message
-    }*/
+    }
     //initialise_accelerometer();
     bluetooth_register_connected_callback(initialise_accelerometer);
     bluetooth_register_disconnected_callback(shutdown_accelerometer);
