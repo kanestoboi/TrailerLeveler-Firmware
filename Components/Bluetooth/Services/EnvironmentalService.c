@@ -8,7 +8,6 @@
 
 #include "EnvironmentalService.h"
 
-
 static uint32_t ess_sensor_data_char_add(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init);
 static uint32_t ess_temperature_char_add(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init);
 static uint32_t ess_orientation_char_add(ble_ess_service_t * p_ess_service, const ble_ess_service_init_t * p_ble_ess_service_init);

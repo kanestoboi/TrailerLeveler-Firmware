@@ -12,7 +12,6 @@
 #include "ble_advdata.h"
 #include "ble_advertising.h"
 #include "ble_conn_params.h"
-#include "ble_bas.h"
 #include "ble_dis.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_soc.h"
@@ -32,8 +31,6 @@
 #include "nrf_dfu_settings.h"
 #include "Bluetooth.h"
 #include "Components/LED/nrf_buddy_led.h"
-
-#include "Services/EnvironmentalService.h"
 
 // DFU-related #includes
 #include "nrf_power.h"
@@ -133,7 +130,6 @@ void bluetooth_init()
     ret_code_t err_code = ble_dfu_buttonless_async_svci_init();
     APP_ERROR_CHECK(err_code);
     #endif
-    //*/
 
     ble_stack_init();                   // initialise the nRF5 BLE stack library 
     gap_params_init();
@@ -317,30 +313,13 @@ static void services_init(void)
 {
     ret_code_t         err_code;
     nrf_ble_qwr_init_t qwr_init = {0};
-    ble_bas_init_t     bas_init;
+    
 
     // Initialize Queued Write Module.
     qwr_init.error_handler = nrf_qwr_error_handler;
 
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
-
-    // Initialize Battery Service.
-    memset(&bas_init, 0, sizeof(bas_init));
-
-    // Here the sec level for the Battery Service can be changed/increased.
-    bas_init.bl_rd_sec        = SEC_OPEN;
-    bas_init.bl_cccd_wr_sec   = SEC_OPEN;
-    bas_init.bl_report_rd_sec = SEC_OPEN;
-
-    bas_init.evt_handler          = NULL;
-    bas_init.support_notification = true;
-    bas_init.p_report_ref         = NULL;
-    bas_init.initial_batt_level   = 100;
-
-    err_code = ble_bas_init(&m_bas, &bas_init);
-    APP_ERROR_CHECK(err_code);
-
 
     // Initialize the DFU service
     #ifndef DEBUG
@@ -368,7 +347,6 @@ static void services_init(void)
     APP_ERROR_CHECK(ble_dis_init(&dis_init));
     #endif
     
-    bluetooth_initialise_ess_service();
 
 }
 
@@ -642,17 +620,6 @@ void bluetooth_advertising_start(bool erase_bonds)
     }
 }
 
-void bluetooth_initialise_ess_service()
-{
-    ret_code_t err_code = ble_ess_service_init();
-    APP_ERROR_CHECK(err_code);
-}
-
-void bluetooth_update_battery_level(uint8_t batteryLevel)
-{
-    ret_code_t err_code;
-    err_code = ble_bas_battery_level_update(&m_bas, batteryLevel, BLE_CONN_HANDLE_ALL);
-}
 
 // Function to register other functions.
 void bluetooth_register_connected_callback(ConnectedCallbackFunctionPointer func) {

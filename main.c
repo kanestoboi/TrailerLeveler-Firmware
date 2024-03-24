@@ -25,6 +25,7 @@
 #include "Components/LED/nrf_buddy_led.h"
 #include "Components/Bluetooth/Bluetooth.h"
 #include "Components/Bluetooth/Services/AccelerometerService.h"
+#include "Components/Bluetooth/Services/BatteryService.h"
 #include "Components/Bluetooth/Services/EnvironmentalService.h"
 
 APP_TIMER_DEF(m_notification_timer_id);
@@ -273,7 +274,7 @@ static void notification_timeout_handler(void * p_context)
     {
         float soc;
         max17260_getStateOfCharge(&max17260Sensor, &soc);
-        bluetooth_update_battery_level((uint8_t)roundf(soc));
+        battery_service_battery_level_update((uint8_t)roundf(soc), BLE_CONN_HANDLE_ALL);
     }
 }
 
@@ -481,6 +482,17 @@ int main(void)
 
     bluetooth_init();
     bluetooth_advertising_start(erase_bonds);
+    
+    if (battery_service_init() != NRF_SUCCESS)
+    {
+        NRF_LOG_INFO("Error Initialing battery service");
+    }
+
+    if (ble_ess_service_init() != NRF_SUCCESS)
+    {
+        NRF_LOG_INFO("Error Initialing ess service");
+    }
+
     NRF_LOG_INFO("Bluetooth setup complete");
     NRF_LOG_FLUSH();
 
