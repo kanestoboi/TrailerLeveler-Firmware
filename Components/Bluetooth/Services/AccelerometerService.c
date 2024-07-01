@@ -19,6 +19,8 @@ static uint32_t accelerometer_angles_char_add( const ble_accelerometer_service_i
 static uint32_t accelerometer_orientation_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 static uint32_t accelerometer_calibration_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 static uint32_t accelerometer_saved_hitch_angle_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+static uint32_t accelerometer_vehicle_length_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+static uint32_t accelerometer_vehicle_width_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 
 BLE_ACCELEROMETER_DEF(m_accelerometer_service);
 
@@ -89,6 +91,18 @@ uint32_t ble_acceleration_service_init(const accelerometer_t accelerometer)
     }
 
     err_code = accelerometer_saved_hitch_angle_char_add(&accelerometer_service_init);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    err_code = accelerometer_vehicle_length_char_add(&accelerometer_service_init);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    err_code = accelerometer_vehicle_width_char_add(&accelerometer_service_init);
     if (err_code != NRF_SUCCESS)
     {
         return err_code;
@@ -474,7 +488,152 @@ uint32_t accelerometer_saved_hitch_angle_char_add(const ble_accelerometer_servic
     }
 
     return NRF_SUCCESS;
+}
 
+
+/**@brief Function for adding the vehicle length characteristic.
+ *
+ * @param[in]   p_accelerometer_service             Accelerometer Service structure.
+ * @param[in]   p_ble_accelerometer_service_init    Information needed to initialize the service.
+ *
+ * @return      NRF_SUCCESS on success, otherwise an error code.
+ */
+uint32_t accelerometer_vehicle_length_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+{
+    uint32_t            err_code;
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_md_t cccd_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&cccd_md, 0, sizeof(cccd_md));
+
+    // Read  operation on Cccd should be possible without authentication.
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
+    
+    cccd_md.vloc       = BLE_GATTS_VLOC_STACK;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.read   = 1;
+    char_md.char_props.write  = 1;
+    char_md.char_props.notify = 1; 
+    char_md.p_char_user_desc  = NULL;
+    char_md.p_char_pf         = NULL;
+    char_md.p_user_desc_md    = NULL;
+    char_md.p_cccd_md         = &cccd_md; 
+    char_md.p_sccd_md         = NULL;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    attr_md.read_perm  = p_ble_accelerometer_service_init->accelerometer_sensor_data_char_attr_md.read_perm;
+    attr_md.write_perm = p_ble_accelerometer_service_init->accelerometer_sensor_data_char_attr_md.write_perm;
+    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth    = 0;
+    attr_md.wr_auth    = 0;
+    attr_md.vlen       = 0;
+
+    ble_uuid.type = m_accelerometer_service.uuid_type;
+
+    ble_uuid.uuid = ACCELEROMETER_VEHICLE_LENGTH_VALUE_CHAR_UUID;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = 1*sizeof(float);
+    attr_char_value.init_offs = 0;
+
+    float savedVehicleLength = saved_parameters_getSavedVehicleLength();        
+    attr_char_value.p_value   = (uint8_t*)&savedVehicleLength; // Pointer to the initial value
+
+    attr_char_value.max_len   = 1*sizeof(float);
+
+    err_code = sd_ble_gatts_characteristic_add(m_accelerometer_service.service_handle, &char_md,
+                                               &attr_char_value,
+                                               &m_accelerometer_service.accelerometer_saved_vehicle_length_handles);
+    
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    return NRF_SUCCESS;
+}
+
+
+/**@brief Function for adding the vehicle width characteristic.
+ *
+ * @param[in]   p_accelerometer_service             Accelerometer Service structure.
+ * @param[in]   p_ble_accelerometer_service_init    Information needed to initialize the service.
+ *
+ * @return      NRF_SUCCESS on success, otherwise an error code.
+ */
+uint32_t accelerometer_vehicle_width_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init)
+{
+    uint32_t            err_code;
+    ble_gatts_char_md_t char_md;
+    ble_gatts_attr_md_t cccd_md;
+    ble_gatts_attr_t    attr_char_value;
+    ble_uuid_t          ble_uuid;
+    ble_gatts_attr_md_t attr_md;
+
+    memset(&cccd_md, 0, sizeof(cccd_md));
+
+    // Read  operation on Cccd should be possible without authentication.
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.read_perm);
+    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cccd_md.write_perm);
+    
+    cccd_md.vloc       = BLE_GATTS_VLOC_STACK;
+
+    memset(&char_md, 0, sizeof(char_md));
+
+    char_md.char_props.read   = 1;
+    char_md.char_props.write  = 1;
+    char_md.char_props.notify = 1; 
+    char_md.p_char_user_desc  = NULL;
+    char_md.p_char_pf         = NULL;
+    char_md.p_user_desc_md    = NULL;
+    char_md.p_cccd_md         = &cccd_md; 
+    char_md.p_sccd_md         = NULL;
+
+    memset(&attr_md, 0, sizeof(attr_md));
+
+    attr_md.read_perm  = p_ble_accelerometer_service_init->accelerometer_sensor_data_char_attr_md.read_perm;
+    attr_md.write_perm = p_ble_accelerometer_service_init->accelerometer_sensor_data_char_attr_md.write_perm;
+    attr_md.vloc       = BLE_GATTS_VLOC_STACK;
+    attr_md.rd_auth    = 0;
+    attr_md.wr_auth    = 0;
+    attr_md.vlen       = 0;
+
+    ble_uuid.type = m_accelerometer_service.uuid_type;
+
+    ble_uuid.uuid = ACCELEROMETER_VEHICLE_WIDTH_VALUE_CHAR_UUID;
+
+    memset(&attr_char_value, 0, sizeof(attr_char_value));
+
+    attr_char_value.p_uuid    = &ble_uuid;
+    attr_char_value.p_attr_md = &attr_md;
+    attr_char_value.init_len  = 1*sizeof(float);
+    attr_char_value.init_offs = 0;
+
+    float savedVehicleWidth = saved_parameters_getSavedVehicleWidth();        
+    attr_char_value.p_value   = (uint8_t*)&savedVehicleWidth; // Pointer to the initial value
+
+    attr_char_value.max_len   = 1*sizeof(float);
+
+    err_code = sd_ble_gatts_characteristic_add(m_accelerometer_service.service_handle, &char_md,
+                                               &attr_char_value,
+                                               &m_accelerometer_service.accelerometer_saved_vehicle_width_handles);
+    
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    return NRF_SUCCESS;
 }
 
 void ble_accelerometer_on_ble_evt( ble_evt_t const * p_ble_evt, void * p_context)
@@ -594,7 +753,7 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         saved_parameters_SaveOrientation(valToWrite);
     }
 
-        /// Check if the handle passed with the event matches the Orientation Characteristic handle.
+    // Check if the handle passed with the event matches the Orientation Characteristic handle.
     if ((p_evt_write->handle == p_accelerometer_service->accelerometer_calibration_handles.value_handle)
         && (p_evt_write->len == 1)
        )
@@ -635,6 +794,22 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
 
         uint8_t resetValue = 0;
         ble_accelerometer_service_calibration_update(&m_accelerometer_service, &resetValue, 1);        
+    }
+
+    if (p_evt_write->handle == p_accelerometer_service->accelerometer_saved_vehicle_length_handles.value_handle)
+    {
+        NRF_LOG_INFO("Message Received from vehicle length.");
+        float *lengthReceivedPtr = (float*)(p_evt_write->data);
+        float lengthReceived = *lengthReceivedPtr;
+        saved_parameters_SaveVehicleLength(lengthReceived);
+    }
+
+        if (p_evt_write->handle == p_accelerometer_service->accelerometer_saved_vehicle_width_handles.value_handle)
+    {
+        NRF_LOG_INFO("Message Received from vehicle width.");
+        float *widthReceivedPtr = (float*)p_evt_write->data;
+        float widthReceived = *widthReceivedPtr;
+        saved_parameters_SaveVehicleWidth(widthReceived);
     }
 };
 
@@ -854,6 +1029,106 @@ uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_se
     // Update database.
     err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
                                         p_accelerometer_service->accelerometer_saved_hitch_angle_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = p_accelerometer_service->accelerometer_saved_hitch_angle_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
+
+uint32_t ble_accelerometer_service_vehicle_length_update(ble_accelerometer_service_t * p_accelerometer_service, float length)
+{
+    if (p_accelerometer_service == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(float);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&length;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+                                        p_accelerometer_service->accelerometer_saved_hitch_angle_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = p_accelerometer_service->accelerometer_saved_vehicle_length_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
+
+uint32_t ble_accelerometer_service_vehicle_width_update(ble_accelerometer_service_t * p_accelerometer_service, float width)
+{
+    if (p_accelerometer_service == NULL)
+    {
+        return NRF_ERROR_NULL;
+    }
+
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(float);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&width;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
+                                        p_accelerometer_service->accelerometer_saved_vehicle_width_handles.value_handle,
                                         &gatts_value);
     if (err_code != NRF_SUCCESS)
     {

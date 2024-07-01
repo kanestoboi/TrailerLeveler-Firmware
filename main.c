@@ -245,11 +245,11 @@ static void notification_timeout_handler(void * p_context)
 
             calculateAnglesFromDeviceOrientation(xGs, yGs, zGs, angles);
 
-            NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[0]) ); // display the read values
-            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[1]) ); // display the read values
-            NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(angles[2]) ); // display the read values
+            //NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[0]) ); // display the read values
+            //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[1]) ); // display the read values
+            //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(angles[2]) ); // display the read values
 
-            NRF_LOG_RAW_INFO("\n");
+            //NRF_LOG_RAW_INFO("\n");
             NRF_LOG_FLUSH();
 
             
@@ -262,7 +262,7 @@ static void notification_timeout_handler(void * p_context)
             
             ble_ess_service_temperature_set(&temp);
 
-            NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));      
+            //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));      
         }
         else
         {
@@ -485,28 +485,15 @@ int main(void)
     
     if (battery_service_init() != NRF_SUCCESS)
     {
-        NRF_LOG_INFO("Error Initialing battery service");
+        NRF_LOG_INFO("Error Initialising battery service");
     }
 
     if (ble_ess_service_init() != NRF_SUCCESS)
     {
-        NRF_LOG_INFO("Error Initialing ess service");
+        NRF_LOG_INFO("Error Initialising ess service");
     }
 
-    NRF_LOG_INFO("Bluetooth setup complete");
-    NRF_LOG_FLUSH();
-
-    if (max17260_init(&max17260Sensor, &m_twi))
-    {
-        NRF_LOG_INFO("MAX17260 Initialised");
-        
-        uint16_t val;
-        max17260_register_read(&max17260Sensor, 0x18, (uint8_t*)&val, 2);
-        NRF_LOG_INFO("Value: %X", val);
-    }
-
-
-    // Try to find an accelerometer sensor on the TWI bus
+        // Try to find an accelerometer sensor on the TWI bus
     if (adxl355_init(&adxl355Sensor, &m_twi))
     {
        ble_acceleration_service_init(ACCELEROMETER_ADXL355);
@@ -523,10 +510,22 @@ int main(void)
         ble_acceleration_service_init(ACCELEROMETER_BMI270);
         NRF_LOG_INFO("BMI270 initialised"); // if it failed to initialize then print a message
     }
-    //initialise_accelerometer();
+    
+    initialise_accelerometer();
     bluetooth_register_connected_callback(initialise_accelerometer);
     bluetooth_register_disconnected_callback(shutdown_accelerometer);
 
+    NRF_LOG_INFO("Bluetooth setup complete");
+    NRF_LOG_FLUSH();
+
+    if (max17260_init(&max17260Sensor, &m_twi))
+    {
+        NRF_LOG_INFO("MAX17260 Initialised");
+        
+        uint16_t val;
+        max17260_register_read(&max17260Sensor, 0x18, (uint8_t*)&val, 2);
+        NRF_LOG_INFO("Value: %X", val);
+    }
 
     NRF_LOG_FLUSH();
 

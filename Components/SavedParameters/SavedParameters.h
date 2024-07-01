@@ -15,9 +15,13 @@ void saved_parameters_init();
 void saved_parameters_getSavedCalibrationAngles(float * angles);
 uint32_t saved_parameters_getSavedOrientation();
 float saved_parameters_getSavedHitchHeightAngle();
+float saved_parameters_getSavedVehicleLength();
+float saved_parameters_getSavedVehicleWidth();
 
 void saved_parameters_SaveAngleOffsets(float * angles);
 void saved_parameters_SaveOrientation(uint32_t orientation);
 void saved_parameters_SaveHitchAngle(float angle);
+void saved_parameters_SaveVehicleLength(float length);
+void saved_parameters_SaveVehicleWidth(float width);
 
 #endif

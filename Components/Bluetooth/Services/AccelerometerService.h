@@ -27,14 +27,16 @@
 
 #define ACCELEROMETER_SERVICE_UUID_BASE {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0xEB, 0xA1, 0xED, 0x11, 0xD9, 0x7D, 0x02, 0xF7, 0x49, 0x76}
 
-#define ACCELEROMETER_SERVICE_UUID                  0x1400
-#define ACCELEROMETER_ADXL355_VALUE_CHAR_UUID       0x1401
-#define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID       0x1402
-#define ACCELEROMETER_ANGLE_CHAR_UUID               0x1403
-#define ACCELEROMETER_ORIENTATION_CHAR_UUID         0x1404
-#define ACCELEROMETER_CALIBRATION_CHAR_UUID         0x1405
-#define ACCELEROMETER_SAVED_HITCH_ANGLE_CHAR_UUID   0x1406
-#define ACCELEROMETER_BMI270_VALUE_CHAR_UUID        0x1407
+#define ACCELEROMETER_SERVICE_UUID                      0x1400
+#define ACCELEROMETER_ADXL355_VALUE_CHAR_UUID           0x1401
+#define ACCELEROMETER_MPU6050_VALUE_CHAR_UUID           0x1402
+#define ACCELEROMETER_ANGLE_CHAR_UUID                   0x1403
+#define ACCELEROMETER_ORIENTATION_CHAR_UUID             0x1404
+#define ACCELEROMETER_CALIBRATION_CHAR_UUID             0x1405
+#define ACCELEROMETER_SAVED_HITCH_ANGLE_CHAR_UUID       0x1406
+#define ACCELEROMETER_BMI270_VALUE_CHAR_UUID            0x1407
+#define ACCELEROMETER_VEHICLE_LENGTH_VALUE_CHAR_UUID    0x1408
+#define ACCELEROMETER_VEHICLE_WIDTH_VALUE_CHAR_UUID     0x1409
 
 /**@brief   Macro for defining a ble_accelerometer instance.
  *
@@ -86,6 +88,8 @@ struct ble_accerometer_service_s
     ble_gatts_char_handles_t        accelerometer_orientation_handles;
     ble_gatts_char_handles_t        accelerometer_calibration_handles;
     ble_gatts_char_handles_t        accelerometer_saved_hitch_angle_handles;
+    ble_gatts_char_handles_t        accelerometer_saved_vehicle_length_handles;
+    ble_gatts_char_handles_t        accelerometer_saved_vehicle_width_handles;
     uint16_t                      conn_handle;                    /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
     uint8_t                       uuid_type; 
 };
@@ -143,6 +147,10 @@ void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angl
 uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
 uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
+
+uint32_t ble_accelerometer_service_vehicle_length_update(ble_accelerometer_service_t * p_accelerometer_service, float length);
+
+uint32_t ble_accelerometer_service_vehicle_width_update(ble_accelerometer_service_t * p_accelerometer_service, float width);
 
 extern ble_accelerometer_service_t m_accelerometer_service;
 
