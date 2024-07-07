@@ -27,6 +27,7 @@
 #include "Components/Bluetooth/Services/AccelerometerService.h"
 #include "Components/Bluetooth/Services/BatteryService.h"
 #include "Components/Bluetooth/Services/EnvironmentalService.h"
+#include "Components/SavedParameters/SavedParameters.h"
 
 APP_TIMER_DEF(m_notification_timer_id);
 
@@ -106,6 +107,7 @@ void initialise_accelerometer()
 
     NRF_LOG_FLUSH();
 
+    ble_accelerometer_service_leveling_mode_update(saved_parameters_getSavedCurrentLevelingMode());
     
     ret_code_t err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
     APP_ERROR_CHECK(err_code);
@@ -245,6 +247,15 @@ static void notification_timeout_handler(void * p_context)
 
             calculateAnglesFromDeviceOrientation(xGs, yGs, zGs, angles);
 
+            static float myFloat[3];
+            float calibrationAngles[3];
+
+            saved_parameters_getSavedCalibrationAngles(calibrationAngles);
+
+            myFloat[0] = angles[0] -  calibrationAngles[0];
+            myFloat[1] = angles[1] -  calibrationAngles[1];
+            myFloat[2] = angles[2] -  calibrationAngles[2];
+           
             //NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[0]) ); // display the read values
             //NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(angles[1]) ); // display the read values
             //NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(angles[2]) ); // display the read values
@@ -252,9 +263,20 @@ static void notification_timeout_handler(void * p_context)
             //NRF_LOG_RAW_INFO("\n");
             NRF_LOG_FLUSH();
 
-            
             uint32_t err_code = ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)6);
-            ble_accelerometer_service_angles_set((uint8_t*)angles, (uint8_t)12);
+            ble_accelerometer_service_angles_set((uint8_t*)myFloat, (uint8_t)12);
+
+            float width = saved_parameters_getSavedVehicleWidth();
+            float angle = angles[0];
+
+            float widthAxisAdjustment = (tan((angle - calibrationAngles[0]) * 3.14 / 180.0) * width);
+            float lengthAxisAdjustment = (tan((angles[1] - calibrationAngles[1]) * 3.14 / 180.0) * saved_parameters_getSavedVehicleLength());
+            NRF_LOG_RAW_INFO("widthAxisAdjustment:" NRF_LOG_FLOAT_MARKER " | ", NRF_LOG_FLOAT(widthAxisAdjustment) ); // display the read values
+            NRF_LOG_RAW_INFO("lengthAxisAdjustment:" NRF_LOG_FLOAT_MARKER "\n", NRF_LOG_FLOAT(lengthAxisAdjustment) ); // display the read values
+            NRF_LOG_FLUSH();
+
+            ble_accelerometer_service_width_axis_adjustment_update(widthAxisAdjustment);
+            ble_accelerometer_service_length_axis_adjustment_update(lengthAxisAdjustment);
 
             float temp;
 
@@ -272,7 +294,7 @@ static void notification_timeout_handler(void * p_context)
     }
     if (&max17260Sensor.initialised)
     {
-        float soc;
+        float soc;  // state of charge
         max17260_getStateOfCharge(&max17260Sensor, &soc);
         battery_service_battery_level_update((uint8_t)roundf(soc), BLE_CONN_HANDLE_ALL);
     }
@@ -458,8 +480,7 @@ void twi_master_init(void)
     nrfx_twi_enable(&m_twi);
 }
 
-/**@brief Function for application main en
-try.
+/**@brief Function for application main entry.
  */
 int main(void)
 {
@@ -532,6 +553,7 @@ int main(void)
     // Keeping this LED on as a visual indicator that the accelerometer has been found        
     //nrf_buddy_led_on(3);
 
+    //initialise_accelerometer();
     // Enter main loop.
     for (;;)
     {

@@ -39,6 +39,7 @@ typedef struct SavedParameters_t
     float savedHitchHeight;
     float vehicleLength;
     float vehicleWidth;
+    uint8_t currentLevelingMode;
 } SavedParameters_t;
 
 static SavedParameters_t mSavedParameters = 
@@ -50,6 +51,7 @@ static SavedParameters_t mSavedParameters =
     .savedHitchHeight = 0.0,
     .vehicleLength = 1.0,
     .vehicleWidth = 1.0,
+    .currentLevelingMode = 0,
 };
 
 /* A record containing dummy configuration data. */
@@ -267,6 +269,11 @@ float saved_parameters_getSavedVehicleWidth()
     return mSavedParameters.vehicleWidth;
 }
 
+uint8_t saved_parameters_getSavedCurrentLevelingMode()
+{
+    return mSavedParameters.currentLevelingMode;
+}
+
 void saved_parameters_SaveAngleOffsets(float * angles)
 {
     mSavedParameters.anglesCalibrationOffsets[0] = angles[0];
@@ -296,6 +303,12 @@ void saved_parameters_SaveVehicleLength(float length)
 void saved_parameters_SaveVehicleWidth(float width)
 {
     mSavedParameters.vehicleWidth = width;
+    record_update();
+}
+
+void saved_parameters_SaveCurrentLevelingMode(uint8_t mode)
+{
+    mSavedParameters.currentLevelingMode = mode;
     record_update();
 }
 

@@ -37,6 +37,9 @@
 #define ACCELEROMETER_BMI270_VALUE_CHAR_UUID            0x1407
 #define ACCELEROMETER_VEHICLE_LENGTH_VALUE_CHAR_UUID    0x1408
 #define ACCELEROMETER_VEHICLE_WIDTH_VALUE_CHAR_UUID     0x1409
+#define ACCELEROMETER_CURRENT_LEVELING_MODE_VALUE_CHAR_UUID     0x1410
+#define ACCELEROMETER_LENGTH_AXIS_ADJUSTMENT_VALUE_CHAR_UUID     0x1411
+#define ACCELEROMETER_WIDTH_AXIS_ADJUSTMENT_VALUE_CHAR_UUID     0x1412
 
 /**@brief   Macro for defining a ble_accelerometer instance.
  *
@@ -90,6 +93,9 @@ struct ble_accerometer_service_s
     ble_gatts_char_handles_t        accelerometer_saved_hitch_angle_handles;
     ble_gatts_char_handles_t        accelerometer_saved_vehicle_length_handles;
     ble_gatts_char_handles_t        accelerometer_saved_vehicle_width_handles;
+    ble_gatts_char_handles_t        accelerometer_vehicle_leveling_mode_handles;
+    ble_gatts_char_handles_t        accelerometer_length_axis_adjustment_handles;
+    ble_gatts_char_handles_t        accelerometer_width_axis_adjustment_handles;
     uint16_t                      conn_handle;                    /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection). */
     uint8_t                       uuid_type; 
 };
@@ -148,9 +154,15 @@ uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_
 
 uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
+uint32_t ble_accelerometer_service_width_axis_adjustment_update(float widthAxisAdjustment);
+
+uint32_t ble_accelerometer_service_length_axis_adjustment_update(float lengthAxisAdjustment);
+
 uint32_t ble_accelerometer_service_vehicle_length_update(ble_accelerometer_service_t * p_accelerometer_service, float length);
 
 uint32_t ble_accelerometer_service_vehicle_width_update(ble_accelerometer_service_t * p_accelerometer_service, float width);
+
+uint32_t ble_accelerometer_service_leveling_mode_update(uint8_t mode);
 
 extern ble_accelerometer_service_t m_accelerometer_service;
 
