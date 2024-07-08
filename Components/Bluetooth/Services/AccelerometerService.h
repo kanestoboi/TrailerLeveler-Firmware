@@ -23,7 +23,7 @@
 #include "ble_srv_common.h"
 #include "nrf_sdh_ble.h"
 
-#include "../../Accelerometers/Accelerometers.h"
+#include "../../AngleSensor/Accelerometers/Accelerometers.h"
 
 #define ACCELEROMETER_SERVICE_UUID_BASE {0x02, 0x00, 0x12, 0xAC, 0x42, 0x02, 0xEB, 0xA1, 0xED, 0x11, 0xD9, 0x7D, 0x02, 0xF7, 0x49, 0x76}
 
@@ -163,6 +163,8 @@ uint32_t ble_accelerometer_service_vehicle_length_update(ble_accelerometer_servi
 uint32_t ble_accelerometer_service_vehicle_width_update(ble_accelerometer_service_t * p_accelerometer_service, float width);
 
 uint32_t ble_accelerometer_service_leveling_mode_update(uint8_t mode);
+
+void ble_accelerometer_service_set_calibration_value_received_callback(void (*func)(uint8_t value));
 
 extern ble_accelerometer_service_t m_accelerometer_service;
 

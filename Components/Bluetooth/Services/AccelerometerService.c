@@ -12,7 +12,6 @@
 #define _RAD_TO_DEG 57.2957795131f  // Constant to convert radians to degrees
 #define _PI 3.14159265359f           // Constant for the value of pi
 
-float mLastAnglesFromSensor[3] = {0.0, 0.0, 0.0};
 
 static uint32_t accelerometer_sensor_data_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 static uint32_t accelerometer_angles_char_add( const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
@@ -24,6 +23,9 @@ static uint32_t accelerometer_vehicle_width_char_add(const ble_accelerometer_ser
 static uint32_t accelerometer_length_axis_adjustment_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 static uint32_t accelerometer_width_axis_adjustment_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 static uint32_t accelerometer_current_leveling_mode_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
+
+// Callback functions for when value are received through BLE characteristics
+void (*mCalibrationValueReceivedCallback)(uint8_t value) = NULL;
 
 BLE_ACCELEROMETER_DEF(m_accelerometer_service);
 
@@ -995,49 +997,9 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         && (p_evt_write->len == 1)
        )
     {
-        switch (p_evt_write->data[0])
-        {
-        case 1:
-        {
-            NRF_LOG_INFO("Message Received from calibration.");
 
-            NRF_LOG_INFO("mLastAnglesFromSensor.");
-            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(mLastAnglesFromSensor[0]) );
-            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(mLastAnglesFromSensor[1]) );
-            NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", \n", NRF_LOG_FLOAT(mLastAnglesFromSensor[2]) );
-
-            saved_parameters_SaveAngleOffsets(mLastAnglesFromSensor);
-
-            float hitchAngleToSendTo = saved_parameters_getSavedHitchHeightAngle() - mLastAnglesFromSensor[1];
-            ble_accelerometer_service_saved_hitch_angle_update(&m_accelerometer_service, (uint8_t *)&hitchAngleToSendTo, sizeof(float));
-            
-            break;
-        }
-
-        case 2:
-        {
-            float angleToSave = mLastAnglesFromSensor[1];
-            saved_parameters_SaveHitchAngle(angleToSave); // save the y angle
-            NRF_LOG_RAW_INFO("angle saved: " NRF_LOG_FLOAT_MARKER ", \n", NRF_LOG_FLOAT(angleToSave) );
-
-            angleToSave = saved_parameters_getSavedHitchHeightAngle(); // save the y angle
-            NRF_LOG_RAW_INFO("angle read back: " NRF_LOG_FLOAT_MARKER ",\n ", NRF_LOG_FLOAT(angleToSave) );
-
-            float angleOffsets[3];
-            saved_parameters_getSavedCalibrationAngles(angleOffsets);
-
-            float hitchAngleToSendTo = mLastAnglesFromSensor[1] - angleOffsets[1];
-            //saved_parameters_SaveHitchAngle(hitchAngleToSendTo);
-            ble_accelerometer_service_saved_hitch_angle_update(&m_accelerometer_service, (uint8_t *)&hitchAngleToSendTo, sizeof(float));
-        }
+        mCalibrationValueReceivedCallback(p_evt_write->data[0]);
         
-        default:
-            break;
-        }
-        
-
-        uint8_t resetValue = 0;
-        ble_accelerometer_service_calibration_update(&m_accelerometer_service, &resetValue, 1);        
     }
 
     if (p_evt_write->handle == p_accelerometer_service->accelerometer_saved_vehicle_length_handles.value_handle)
@@ -1581,7 +1543,6 @@ uint32_t ble_accelerometer_service_sensor_data_set(uint8_t *custom_value, uint8_
 
 uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t custom_value_length)
 {
-    memcpy(mLastAnglesFromSensor, custom_value, custom_value_length); 
 
     // NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[0]) ); // display the read values
     // NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[1]) ); // display the read values
@@ -1591,6 +1552,11 @@ uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t cus
     NRF_LOG_FLUSH();
 
     return ble_accelerometer_service_angles_update(&m_accelerometer_service, (uint8_t *)custom_value, custom_value_length); 
+}
+
+void ble_accelerometer_service_set_calibration_value_received_callback(void (*func)(uint8_t value))
+{
+    mCalibrationValueReceivedCallback = func;
 }
 
 void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles) {
