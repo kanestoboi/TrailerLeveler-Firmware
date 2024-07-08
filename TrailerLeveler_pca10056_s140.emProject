@@ -46,22 +46,24 @@
     <configuration Name="Release" gcc_optimization_level="None" />
     <folder Name="Application">
       <folder Name="Components">
-        <folder Name="Accelerometers">
-          <folder
-            Name="ADXL355"
-            exclude=""
-            filter="*.*"
-            path="Components/Accelerometers/ADXL355"
-            recurse="No" />
-          <folder Name="BMI270">
-            <file file_name="Components/Accelerometers/BMI270/bmi270.c" />
-            <file file_name="Components/Accelerometers/BMI270/bmi270.h" />
+        <folder Name="AngleSensor">
+          <folder Name="Accelerometers">
+            <folder
+              Name="ADXL355"
+              exclude=""
+              filter="*.*"
+              path="Components/AngleSensor/Accelerometers/ADXL355"
+              recurse="No" />
+            <folder Name="BMI270">
+              <file file_name="Components/AngleSensor/Accelerometers/BMI270/bmi270.c" />
+              <file file_name="Components/AngleSensor/Accelerometers/BMI270/bmi270.h" />
+            </folder>
+            <folder Name="MPU6050">
+              <file file_name="Components/AngleSensor/Accelerometers/MPU6050/mpu6050.c" />
+              <file file_name="Components/AngleSensor/Accelerometers/MPU6050/mpu6050.h" />
+            </folder>
+            <file file_name="Components/AngleSensor/Accelerometers/Accelerometers.h" />
           </folder>
-          <folder Name="MPU6050">
-            <file file_name="Components/Accelerometers/MPU6050/mpu6050.c" />
-            <file file_name="Components/Accelerometers/MPU6050/mpu6050.h" />
-          </folder>
-          <file file_name="Components/Accelerometers/Accelerometers.h" />
         </folder>
         <folder Name="Bluetooth">
           <folder Name="Services">
