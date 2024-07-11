@@ -10,7 +10,7 @@ emBuild -config "Release" -echo ../../TrailerLeveler-Bootloader/TrailerLevelerBo
 set build-configuration=Release
 
 set majorFirmwareVersion=0
-set minorFirmwareVersion=5
+set minorFirmwareVersion=6
 set patchFirmwareVersion=0
 
 @REM set the firmware version as a uint32 where each bytes represents the major, minor and patch versionsS
