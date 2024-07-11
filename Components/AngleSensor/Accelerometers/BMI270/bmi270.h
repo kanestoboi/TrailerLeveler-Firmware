@@ -147,6 +147,9 @@ bool bmi270_GetInternalStatus(BMI270 *sensor, uint8_t *statusMessage);
 
 bool bmi270_WriteConfig(BMI270 *sensor);
 
+bool bmi270_sleep(BMI270 *sensor);
+
+bool bmi270_wakeup(BMI270 *sensor);
 
 
 #endif

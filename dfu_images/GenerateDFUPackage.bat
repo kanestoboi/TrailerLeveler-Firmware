@@ -1,7 +1,11 @@
 
 @Echo off
 echo Compiling Release
+rm -r ../output
+rm -r ../../TrailerLeveler-Bootloader/output
+
 emBuild -config "Release" -echo ../TrailerLeveler_pca10056_s140.emProject
+emBuild -config "Release" -echo ../../TrailerLeveler-Bootloader/TrailerLevelerBootloader_s140_pca10056.emProject
 
 set build-configuration=Release
 
@@ -19,7 +23,7 @@ set /A blSettingsVersion=1
 
 set application-hex=../Output/%build-configuration%/Exe/TrailerLeveler.hex
 set soft-device-hex=../../nRF5_SDK_Current/components/softdevice/s140/hex/s140_nrf52_7.2.0_softdevice.hex
-set bootloader-hex=../../TrailerLeveler-Bootloader/Output/Release/Exe/TrailerLevelerSecureBootloader_s140_pca10056.hex
+set bootloader-hex=../../TrailerLeveler-Bootloader/Output/Release/Exe/TrailerLevelerBootloader_s140_pca10056.hex
 
 echo Generating DFU Settings Page
 nrfutil.exe settings generate --family NRF52840 --application %application-hex% --application-version %firmwareVersion% --bootloader-version %bootloaderVersion% --bl-settings-version %blSettingsVersion% bl_settings.hex
