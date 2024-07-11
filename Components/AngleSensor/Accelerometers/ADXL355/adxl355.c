@@ -14,14 +14,8 @@ bool adxl355_register_write(ADXL355 *sensor, uint8_t register_address, uint8_t v
     tx_buf[0] = register_address;
     tx_buf[1] = value;
 
-    //Set the flag to false to show the transmission is not yet completed
-    sensor->mTransferDone = false;
-    
     //Transmit the data over TWI Bus
     err_code = nrfx_twi_tx(sensor->mHandle, ADXL355_ADDRESS, tx_buf, ADXL355_ADDRESS_LEN+1, false);
-    
-    //Wait until the transmission of the data is finished
-    while (sensor->mTransferDone == false) {}
 
     // if there is no error then return true else return false
     if (NRF_SUCCESS != err_code)
@@ -37,29 +31,17 @@ bool adxl355_register_read(ADXL355 *sensor, uint8_t register_address, uint8_t * 
 {
     ret_code_t err_code;
 
-    //Set the flag to false to show the receiving is not yet completed
-    sensor->mTransferDone = false;
-    
     // Send the Register address where we want to write the data
     err_code = nrfx_twi_tx(sensor->mHandle, ADXL355_ADDRESS, &register_address, 1, true);
-	  
-    //Wait for the transmission to get completed
-    while (sensor->mTransferDone == false){}
-    
+	     
     // If transmission was not successful, exit the function with false as return value
     if (NRF_SUCCESS != err_code)
     {
         return false;
     }
-
-    //set the flag again so that we can read data from the ADXL355's internal register
-    sensor->mTransferDone = false;
 	  
     // Receive the data from the ADXL355
     err_code = nrfx_twi_rx(sensor->mHandle, ADXL355_ADDRESS, destination, number_of_bytes);
-		
-    //wait until the transmission is completed
-    while (sensor->mTransferDone == false){}
 	
     // if data was successfully read, return true else return false
     if (NRF_SUCCESS != err_code)
@@ -127,7 +109,6 @@ bool adxl355_verify_part_id(ADXL355 *sensor)
 bool adxl355_init(ADXL355 *sensor, const nrfx_twi_t *m_twi)
 {   
   sensor->mHandle = m_twi;
-  sensor->mTransferDone = false;
   sensor->initialised = false;
 
   //Check the id to confirm that we are communicating with the right device
@@ -148,7 +129,6 @@ bool adxl355_init(ADXL355 *sensor, const nrfx_twi_t *m_twi)
 
   sensor->initialised = true;
   return true;
-
 }
 
 

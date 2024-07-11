@@ -146,7 +146,7 @@ uint32_t ble_accelerometer_service_sensor_data_update(ble_accelerometer_service_
 void ble_accelerometer_on_accelerometer_evt(ble_accelerometer_service_t * p_accelerometer_service, ble_accelerometer_evt_t * p_evt);
 
 uint32_t ble_accelerometer_service_sensor_data_set(uint8_t *custom_value, uint8_t custom_value_length);
-uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t custom_value_length);
+uint32_t ble_accelerometer_service_angles_set(float *angles);
 
 void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles);
 

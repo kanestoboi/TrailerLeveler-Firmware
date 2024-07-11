@@ -1541,17 +1541,9 @@ uint32_t ble_accelerometer_service_sensor_data_set(uint8_t *custom_value, uint8_
     return ble_accelerometer_service_sensor_data_update(&m_accelerometer_service, custom_value, custom_value_length); 
 }
 
-uint32_t ble_accelerometer_service_angles_set(uint8_t *custom_value, uint8_t custom_value_length)
+uint32_t ble_accelerometer_service_angles_set(float *angles)
 {
-
-    // NRF_LOG_RAW_INFO("x" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[0]) ); // display the read values
-    // NRF_LOG_RAW_INFO("y:" NRF_LOG_FLOAT_MARKER ", ", NRF_LOG_FLOAT(myFloat[1]) ); // display the read values
-    // NRF_LOG_RAW_INFO("z:" NRF_LOG_FLOAT_MARKER " ", NRF_LOG_FLOAT(myFloat[2]) ); // display the read values
-
-    // NRF_LOG_RAW_INFO("\n");
-    NRF_LOG_FLUSH();
-
-    return ble_accelerometer_service_angles_update(&m_accelerometer_service, (uint8_t *)custom_value, custom_value_length); 
+    return ble_accelerometer_service_angles_update(&m_accelerometer_service, (uint8_t *)angles, 12); 
 }
 
 void ble_accelerometer_service_set_calibration_value_received_callback(void (*func)(uint8_t value))

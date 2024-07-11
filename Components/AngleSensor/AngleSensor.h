@@ -11,22 +11,27 @@ typedef struct
     /**
      * @brief Function for initializing the angle sensor.
      */
-    ret_code_t (* angle_sensor_init)(const nrfx_twi_t *m_twi);
+    ret_code_t (* init)(const nrfx_twi_t *m_twi);
 
     /**
      * @brief Function for uninitializing the LCD controller.
      */
-    void (* angle_sensor_uninit)(void);
+    void (* uninit)(void);
 
-    void (* angle_sensor_sleep)();
+    void (* sleep)();
 
-    void (* angle_sensor_wakeup)();
+    void (* wakeup)();
 
-    void (* angle_sensor_get_angles)();
+    float * (* get_angles)();
+
+
 
 }angle_sensor_t;
 
-void angle_sensor_sleep(angle_sensor_t angle_sensor);
-void angle_sensor_wakeup(angle_sensor_t angle_sensor);
+ret_code_t angle_sensor_init(const nrfx_twi_t *m_twi);
+
+void angle_sensor_log_angles(float *angles);
+
+extern angle_sensor_t angle_sensor;
 
 #endif

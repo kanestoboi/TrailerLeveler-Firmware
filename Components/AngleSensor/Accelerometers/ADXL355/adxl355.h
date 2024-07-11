@@ -94,8 +94,6 @@
 typedef struct ADXL355 
 {
   const nrfx_twi_t *mHandle;
-
-  bool mTransferDone;
   bool initialised;
 } ADXL355;
 

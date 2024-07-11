@@ -64,6 +64,8 @@
             </folder>
             <file file_name="Components/AngleSensor/Accelerometers/Accelerometers.h" />
           </folder>
+          <file file_name="Components/AngleSensor/AngleSensor.c" />
+          <file file_name="Components/AngleSensor/AngleSensor.h" />
         </folder>
         <folder Name="Bluetooth">
           <folder Name="Services">

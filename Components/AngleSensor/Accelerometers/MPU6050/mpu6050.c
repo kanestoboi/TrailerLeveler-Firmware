@@ -13,15 +13,9 @@ bool mpu6050_register_write(MPU6050 *sensor, uint8_t register_address, uint8_t v
     //Write the register address and data into transmit buffer
     tx_buf[0] = register_address;
     tx_buf[1] = value;
-
-    //Set the flag to false to show the transmission is not yet completed
-    sensor->mTransferDone = false;
     
     //Transmit the data over TWI Bus
     err_code = nrfx_twi_tx(sensor->mHandle, MPU6050_ADDRESS, tx_buf, MPU6050_ADDRESS_LEN+1, false);
-    
-    //Wait until the transmission of the data is finished
-    while (sensor->mTransferDone == false) {}
 
     // if there is no error then return true else return false
     if (NRF_SUCCESS != err_code)
@@ -35,14 +29,9 @@ bool mpu6050_register_write(MPU6050 *sensor, uint8_t register_address, uint8_t v
 bool mpu6050_register_read(MPU6050 *sensor, uint8_t register_address, uint8_t * destination, uint8_t number_of_bytes)
 {
     ret_code_t err_code;
-
-    //Set the flag to false to show the receiving is not yet completed
-    sensor->mTransferDone = false;
-    
+   
     // Send the Register address where we want to write the data
     err_code = nrfx_twi_tx(sensor->mHandle, MPU6050_ADDRESS, &register_address, 1, true);
-    //Wait for the transmission to get completed
-    while (sensor->mTransferDone == false){}
     
     // If transmission was not successful, exit the function with false as return value
     if (NRF_SUCCESS != err_code)
@@ -50,13 +39,8 @@ bool mpu6050_register_read(MPU6050 *sensor, uint8_t register_address, uint8_t * 
         return false;
     }
 
-    //set the flag again so that we can read data from the MPU6050's internal register
-    sensor->mTransferDone = false;
     // Receive the data from the MPU6050
     err_code = nrfx_twi_rx(sensor->mHandle, MPU6050_ADDRESS, destination, number_of_bytes);
-		
-    //wait until the transmission is completed
-    while (sensor->mTransferDone == false){}
 	
     // if data was successfully read, return true else return false
     if (NRF_SUCCESS != err_code)
@@ -111,7 +95,6 @@ bool mpu6050_init(MPU6050 *sensor, const nrfx_twi_t *m_twi)
 {   
 
   sensor->mHandle = m_twi;
-  sensor->mTransferDone = false;
   sensor->initialised = false;
 
   //Check the id to confirm that we are communicating with the right device

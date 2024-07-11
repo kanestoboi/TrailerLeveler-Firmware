@@ -459,13 +459,14 @@ bool bmi270_register_write(BMI270 *sensor, uint8_t register_address, uint8_t val
     tx_buf[1] = value;
 
     //Set the flag to false to show the transmission is not yet completed
-    sensor->mTransferDone = false;
+    //sensor->mTransferDone = false;
     
     //Transmit the data over TWI Bus
     err_code = nrfx_twi_tx(sensor->mHandle, BMI270_ADDRESS, tx_buf, BMI270_ADDRESS_LEN+1, false);
     
     //Wait until the transmission of the data is finished
-    while (sensor->mTransferDone == false) {}
+    //while (sensor->mTransferDone == false) {}
+    while(nrfx_twi_is_busy(sensor->mHandle)){}
 
     // if there is no error then return true else return false
     if (NRF_SUCCESS != err_code)
@@ -481,12 +482,14 @@ bool bmi270_register_read(BMI270 *sensor, uint8_t register_address, uint8_t * de
     ret_code_t err_code;
 
     //Set the flag to false to show the receiving is not yet completed
-    sensor->mTransferDone = false;
+    //sensor->mTransferDone = false;
     
     // Send the Register address where we want to write the data
     err_code = nrfx_twi_tx(sensor->mHandle, BMI270_ADDRESS, &register_address, 1, true);
+    APP_ERROR_CHECK(err_code);
     //Wait for the transmission to get completed
-    while (sensor->mTransferDone == false){}
+    //while (sensor->mTransferDone == false){}
+    while(nrfx_twi_is_busy(sensor->mHandle)){}
     
     // If transmission was not successful, exit the function with false as return value
     if (NRF_SUCCESS != err_code)
@@ -500,7 +503,8 @@ bool bmi270_register_read(BMI270 *sensor, uint8_t register_address, uint8_t * de
     err_code = nrfx_twi_rx(sensor->mHandle, BMI270_ADDRESS, destination, number_of_bytes);
 		
     //wait until the transmission is completed
-    while (sensor->mTransferDone == false){}
+    //while (sensor->mTransferDone == false){}
+    while(nrfx_twi_is_busy(sensor->mHandle)){}
 	
     // if data was successfully read, return true else return false
     if (NRF_SUCCESS != err_code)
@@ -545,6 +549,8 @@ bool bmi270_init(BMI270 *sensor, const nrfx_twi_t *m_twi)
   {
     return false;
   }
+
+  bmi270_WriteConfig(sensor);
 
   sensor->initialised = true;
 
@@ -729,17 +735,20 @@ bool bmi270_WriteConfig(BMI270 *sensor)
     nrf_delay_us(450);
     bmi270_register_write(sensor, BMI270_INIT_CTRL_REG, 0x00);
 
-    while(sensor->mTransferDone == false);
+    //while(sensor->mTransferDone == false);
+    while(nrfx_twi_is_busy(sensor->mHandle)){}
 
     //Set the flag to false to show the transmission is not yet completed
-    sensor->mTransferDone = false;
+    //sensor->mTransferDone = false;
 
     NRF_LOG_INFO("Config File Size: %u", sizeof(bmi270_config_file))
     
     err_code = nrfx_twi_tx(sensor->mHandle, BMI270_ADDRESS, bmi270_config_file, sizeof(bmi270_config_file) + 1, false);
     
     //Wait until the transmission of the data is finished
-    while (sensor->mTransferDone == false) {}
+    //while (sensor->mTransferDone == false) {}
+
+    while(nrfx_twi_is_busy(sensor->mHandle)){}
 
     bmi270_register_write(sensor, BMI270_INIT_CTRL_REG, 0x01);
 
@@ -755,6 +764,16 @@ bool bmi270_WriteConfig(BMI270 *sensor)
     }
     
     return true;	
+}
+
+bool bmi270_sleep(BMI270 *sensor)
+{
+    return true;
+}
+
+bool bmi270_wakeup(BMI270 *sensor)
+{
+    return true;
 }
 
 

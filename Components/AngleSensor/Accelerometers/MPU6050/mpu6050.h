@@ -126,8 +126,6 @@
 typedef struct MPU6050 
 {
   const nrfx_twi_t *mHandle;
-
-  bool mTransferDone;
   bool initialised;
 } MPU6050;
 
