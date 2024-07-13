@@ -24,7 +24,7 @@ typedef struct
 
     float * (* get_angles)();
 
-
+    void (* set_orientation)(uint16_t orientation);
 
 }angle_sensor_t;
 

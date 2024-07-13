@@ -36,11 +36,13 @@ static void angle_sensor_mpu6050_wakeup();
 static float map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2);
 static void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles);
 static float* angle_sensor_get_angles();
+static void angle_sensor_set_sensor_orientation(uint16_t orientation);
 
 angle_sensor_t angle_sensor = 
 {
     .init = angle_sensor_init,
     .get_angles = angle_sensor_get_angles,
+    .set_orientation = angle_sensor_set_sensor_orientation,
 };
 
 static float xGs;
@@ -246,6 +248,8 @@ static void angle_sensor_mpu6050_wakeup()
     mpu6050_register_write(&mpu6050Sensor, MPU6050_CONFIG_REG , 0x06);      // Configure the DLPF to 10 Hz, 13.8 ms / 10 Hz, 13.4 ms, 1 kHz
     mpu6050_EnableInterrupt(&mpu6050Sensor, DISABLE_ALL_INTERRUPTS);        // Disable Interrupts
     mpu6050_register_write(&mpu6050Sensor, MPU6050_ACCEL_CONFIG_REG, 0x04); // Configure the DHPF available in the path leading to motion detectors to 0.63Hz
+
+    start_read_angle_sensor_timer();
 }
 
 static float* angle_sensor_get_angles()
@@ -253,10 +257,14 @@ static float* angle_sensor_get_angles()
     return mLastAnglesFromSensor;
 }
 
+static void angle_sensor_set_sensor_orientation(uint16_t orientation)
+{
+    sensorOrientation = orientation;
+}
+
 static float map(int32_t value, int32_t low1, int32_t high1, int32_t low2, int32_t high2) {
     return low2 + ((float)(high2 - low2) * (value - low1) / (high1 - low1));
 }
-
 
 static void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles) 
 {

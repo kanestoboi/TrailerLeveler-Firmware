@@ -150,9 +150,11 @@ uint32_t ble_accelerometer_service_angles_set(float *angles);
 
 void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles);
 
+uint32_t ble_accelerometer_service_orientation_update(uint8_t orientation);
+
 uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
 
-uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length);
+uint32_t ble_accelerometer_service_saved_hitch_angle_update(float angle);
 
 uint32_t ble_accelerometer_service_width_axis_adjustment_update(float widthAxisAdjustment);
 
@@ -164,7 +166,19 @@ uint32_t ble_accelerometer_service_vehicle_width_update(ble_accelerometer_servic
 
 uint32_t ble_accelerometer_service_leveling_mode_update(uint8_t mode);
 
+uint32_t ble_accelerometer_service_saved_vehicle_length_update(float length);
+
+uint32_t ble_accelerometer_service_saved_vehicle_width_update(float width);
+
 void ble_accelerometer_service_set_calibration_value_received_callback(void (*func)(uint8_t value));
+
+void ble_accelerometer_service_set_orientation_received_handler(void (*func)(uint16_t orientation ));
+
+void ble_accelerometer_service_set_vehicle_length_received_handler(void (*func)(uint16_t length ));
+
+void ble_accelerometer_service_set_vehicle_width_received_handler(void (*func)(uint16_t width ));
+
+void ble_accelerometer_service_set_leveling_mode_received_handler(void (*func)(uint16_t levelingMode ));
 
 extern ble_accelerometer_service_t m_accelerometer_service;
 
