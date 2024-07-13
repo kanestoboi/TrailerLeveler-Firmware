@@ -37,16 +37,45 @@ APP_TIMER_DEF(m_notification_timer_id);
 #define TWI_SCL_M           6         //I2C SCL Pin
 #define TWI_SDA_M           8        //I2C SDA Pin
 
-#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(1000/30)
+#define NOTIFICATION_INTERVAL           APP_TIMER_TICKS(1000/30) // 30 Hz
 
 // Create a Handle for the twi communication
 const nrfx_twi_t m_twi = NRFX_TWI_INSTANCE(TWI_INSTANCE_ID);
 
 static MAX17260 max17260Sensor;
 
+
+
+void orientationValueReceivedHandler(uint16_t orientation)
+{
+    saved_parameters_SaveOrientation(orientation);
+    angle_sensor.set_orientation(orientation);
+}
+
+void vehicleLengthValueReceivedHandler(uint16_t length)
+{
+    saved_parameters_SaveVehicleLength(length);
+}
+
+void vehicleWidthValueReceivedHandler(uint16_t width)
+{
+    saved_parameters_SaveVehicleWidth(width);
+}
+
+void levelingModeReceivedHandler(uint16_t levelingMode)
+{
+    saved_parameters_SaveCurrentLevelingMode(levelingMode);
+}
+
 void initialise_accelerometer()
 {
     ble_accelerometer_service_leveling_mode_update(saved_parameters_getSavedCurrentLevelingMode());
+    ble_accelerometer_service_orientation_update((uint8_t)saved_parameters_getSavedOrientation());
+
+    ble_accelerometer_service_saved_hitch_angle_update(saved_parameters_getSavedHitchHeightAngle());
+
+    ble_accelerometer_service_saved_vehicle_length_update(saved_parameters_getSavedVehicleLength());
+    ble_accelerometer_service_saved_vehicle_width_update(saved_parameters_getSavedVehicleWidth());
     
     angle_sensor.wakeup();
     ret_code_t err_code = app_timer_start(m_notification_timer_id, NOTIFICATION_INTERVAL, NULL);
@@ -60,8 +89,6 @@ void calibration_value_received_callback(uint8_t value)
     case 1: // Calibrate sensor
     {
         NRF_LOG_INFO("Message Received from calibration.");
-
-
         saved_parameters_SaveAngleOffsets(angle_sensor.get_angles());
         
         break;
@@ -81,18 +108,16 @@ void calibration_value_received_callback(uint8_t value)
 
         float hitchAngleToSendTo = angle_sensor.get_angles()[1] - angleOffsets[1];
         saved_parameters_SaveHitchAngle(hitchAngleToSendTo);
-        ble_accelerometer_service_saved_hitch_angle_update(&m_accelerometer_service, (uint8_t *)&hitchAngleToSendTo, sizeof(float));
+        ble_accelerometer_service_saved_hitch_angle_update(hitchAngleToSendTo);
     }
     
     default:
         break;
     }
-    
 
     uint8_t resetValue = 0;
     ble_accelerometer_service_calibration_update(&m_accelerometer_service, &resetValue, 1);
 }
-
 
 void shutdown_accelerometer()
 {
@@ -101,7 +126,6 @@ void shutdown_accelerometer()
 
     ret_code_t err_code = app_timer_stop(m_notification_timer_id);
     APP_ERROR_CHECK(err_code);
-
 }
 
 /**@brief Function for handling the Accelerometer measurement timer timeout.
@@ -141,7 +165,6 @@ static void notification_timeout_handler(void * p_context)
     //ble_accelerometer_service_sensor_data_set((uint8_t*)AccValue, (uint8_t)6);
 
     ble_accelerometer_service_angles_set(angles);
-     
 
     if (max17260Sensor.initialised)
     {
@@ -317,6 +340,9 @@ int main(void)
     nrf_buddy_leds_init();              // initialise nRF52 buddy leds library
     power_management_init();            // initialise the nRF5 power management library
 
+    
+    saved_parameters_init();
+
     bluetooth_init();
 
     bluetooth_advertising_start(erase_bonds);
@@ -340,6 +366,11 @@ int main(void)
     bluetooth_register_connected_callback(initialise_accelerometer);
     bluetooth_register_disconnected_callback(shutdown_accelerometer);
 
+    ble_accelerometer_service_set_orientation_received_handler(orientationValueReceivedHandler);
+    ble_accelerometer_service_set_vehicle_length_received_handler(vehicleLengthValueReceivedHandler);
+    ble_accelerometer_service_set_vehicle_width_received_handler(vehicleWidthValueReceivedHandler);
+    ble_accelerometer_service_set_leveling_mode_received_handler(levelingModeReceivedHandler);
+
     NRF_LOG_INFO("Bluetooth setup complete");
     NRF_LOG_FLUSH();
 
@@ -350,9 +381,11 @@ int main(void)
         uint16_t val;
         max17260_register_read(&max17260Sensor, 0x18, (uint8_t*)&val, 2);
         NRF_LOG_INFO("Value: %X", val);
+        NRF_LOG_FLUSH();
     }
 
     angle_sensor.init(&m_twi);
+    angle_sensor.set_orientation(saved_parameters_getSavedOrientation());
 
     NRF_LOG_FLUSH();
 

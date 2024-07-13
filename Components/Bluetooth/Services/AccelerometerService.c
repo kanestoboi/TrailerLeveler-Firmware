@@ -7,11 +7,16 @@
 #include "math.h"
 #include "nrf_log_ctrl.h"
 
-#include "Components/SavedParameters/SavedParameters.h"
 
 #define _RAD_TO_DEG 57.2957795131f  // Constant to convert radians to degrees
 #define _PI 3.14159265359f           // Constant for the value of pi
 
+// Callback functions for when value are received through BLE characteristics
+void (*mCalibrationValueReceivedHandler)(uint8_t value) = NULL;
+void (*mOrientationValueReceivedHandler)(uint16_t orientation) = NULL;
+void (*mVehicleLengthValueReceivedHandler)(uint16_t length) = NULL;
+void (*mVehicleWidthValueReceivedHandler)(uint16_t width) = NULL;
+void (*mLevelingModeReceivedHandler)(uint16_t levelingMode) = NULL;
 
 static uint32_t accelerometer_sensor_data_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init, const accelerometer_t accelerometer);
 static uint32_t accelerometer_angles_char_add( const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
@@ -24,8 +29,6 @@ static uint32_t accelerometer_length_axis_adjustment_char_add(const ble_accelero
 static uint32_t accelerometer_width_axis_adjustment_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 static uint32_t accelerometer_current_leveling_mode_char_add(const ble_accelerometer_service_init_t * p_ble_accelerometer_service_init);
 
-// Callback functions for when value are received through BLE characteristics
-void (*mCalibrationValueReceivedCallback)(uint8_t value) = NULL;
 
 BLE_ACCELEROMETER_DEF(m_accelerometer_service);
 
@@ -64,8 +67,6 @@ uint32_t ble_acceleration_service_init(const accelerometer_t accelerometer)
     // Initialize service structure
     m_accelerometer_service.evt_handler           = accelerometer_service_init.evt_handler;
     m_accelerometer_service.conn_handle           = BLE_CONN_HANDLE_INVALID;
-
-    saved_parameters_init();
 
     // Add accelerometer value characteristic to the accelerometer service
     err_code = accelerometer_sensor_data_char_add( &accelerometer_service_init, accelerometer);
@@ -350,9 +351,9 @@ uint32_t accelerometer_orientation_char_add(const ble_accelerometer_service_init
     attr_char_value.init_len  = 1*sizeof(uint8_t);
     attr_char_value.init_offs = 0;
 
-    uint8_t savedOrientation = (uint8_t)saved_parameters_getSavedOrientation();
+    uint8_t initialOrientation = 1;
         
-    attr_char_value.p_value   = &savedOrientation; // Pointer to the initial value
+    attr_char_value.p_value   = &initialOrientation; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(uint8_t);
 
@@ -497,8 +498,8 @@ uint32_t accelerometer_saved_hitch_angle_char_add(const ble_accelerometer_servic
     attr_char_value.init_len  = 1*sizeof(float);
     attr_char_value.init_offs = 0;
 
-    float savedHitchAngle = saved_parameters_getSavedHitchHeightAngle();        
-    attr_char_value.p_value   = (uint8_t*)&savedHitchAngle; // Pointer to the initial value
+    float initialSavedHitchAngle = 0.0;        
+    attr_char_value.p_value   = (uint8_t*)&initialSavedHitchAngle; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(float);
 
@@ -570,8 +571,8 @@ uint32_t accelerometer_vehicle_length_char_add(const ble_accelerometer_service_i
     attr_char_value.init_len  = 1*sizeof(float);
     attr_char_value.init_offs = 0;
 
-    float savedVehicleLength = saved_parameters_getSavedVehicleLength();        
-    attr_char_value.p_value   = (uint8_t*)&savedVehicleLength; // Pointer to the initial value
+    float initialSavedVehicleLength = 1.0;   
+    attr_char_value.p_value   = (uint8_t*)&initialSavedVehicleLength; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(float);
 
@@ -642,8 +643,8 @@ uint32_t accelerometer_length_axis_adjustment_char_add(const ble_accelerometer_s
     attr_char_value.init_len  = 1*sizeof(float);
     attr_char_value.init_offs = 0;
 
-    float savedVehicleLength = saved_parameters_getSavedVehicleLength();        
-    attr_char_value.p_value   = (uint8_t*)&savedVehicleLength; // Pointer to the initial value
+    float initialSavedVehicleLength = 1.0;        
+    attr_char_value.p_value   = (uint8_t*)&initialSavedVehicleLength; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(float);
 
@@ -714,8 +715,8 @@ uint32_t accelerometer_width_axis_adjustment_char_add(const ble_accelerometer_se
     attr_char_value.init_len  = 1*sizeof(float);
     attr_char_value.init_offs = 0;
 
-    float savedVehicleLength = saved_parameters_getSavedVehicleLength();        
-    attr_char_value.p_value   = (uint8_t*)&savedVehicleLength; // Pointer to the initial value
+    float initialSavedVehicleLength = 1.0;        
+    attr_char_value.p_value   = (uint8_t*)&initialSavedVehicleLength; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(float);
 
@@ -786,8 +787,8 @@ uint32_t accelerometer_vehicle_width_char_add(const ble_accelerometer_service_in
     attr_char_value.init_len  = 1*sizeof(float);
     attr_char_value.init_offs = 0;
 
-    float savedVehicleWidth = saved_parameters_getSavedVehicleWidth();        
-    attr_char_value.p_value   = (uint8_t*)&savedVehicleWidth; // Pointer to the initial value
+    float initialSavedVehicleWidth = 1.0;        
+    attr_char_value.p_value   = (uint8_t*)&initialSavedVehicleWidth; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(float);
 
@@ -858,8 +859,8 @@ uint32_t accelerometer_current_leveling_mode_char_add(const ble_accelerometer_se
     attr_char_value.init_len  = 1*sizeof(uint8_t);
     attr_char_value.init_offs = 0;
 
-    float savedCurrentLevelingMode = saved_parameters_getSavedCurrentLevelingMode();        
-    attr_char_value.p_value   = (uint8_t*)&savedCurrentLevelingMode; // Pointer to the initial value
+    uint8_t initialSavedCurrentLevelingMode = 1;        
+    attr_char_value.p_value   = (uint8_t*)&initialSavedCurrentLevelingMode; // Pointer to the initial value
 
     attr_char_value.max_len   = 1*sizeof(uint8_t);
 
@@ -985,11 +986,9 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
     {
         NRF_LOG_INFO("Message Received from orientation.");
 
-        //memcpy(&mAccelerometerOrientation, p_evt_write->data, sizeof(uint8_t));
-
         uint32_t valToWrite = (uint32_t)p_evt_write->data[0];
 
-        saved_parameters_SaveOrientation(valToWrite);
+        mOrientationValueReceivedHandler((uint16_t)valToWrite);
     }
 
     // Check if the handle passed with the event matches the Orientation Characteristic handle.
@@ -997,9 +996,7 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         && (p_evt_write->len == 1)
        )
     {
-
-        mCalibrationValueReceivedCallback(p_evt_write->data[0]);
-        
+        mCalibrationValueReceivedHandler(p_evt_write->data[0]);
     }
 
     if (p_evt_write->handle == p_accelerometer_service->accelerometer_saved_vehicle_length_handles.value_handle)
@@ -1007,7 +1004,8 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         NRF_LOG_INFO("Message Received from vehicle length.");
         float *lengthReceivedPtr = (float*)(p_evt_write->data);
         float lengthReceived = *lengthReceivedPtr;
-        saved_parameters_SaveVehicleLength(lengthReceived);
+
+        mVehicleLengthValueReceivedHandler(lengthReceived);
     }
 
     if (p_evt_write->handle == p_accelerometer_service->accelerometer_saved_vehicle_width_handles.value_handle)
@@ -1015,7 +1013,7 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         NRF_LOG_INFO("Message Received from vehicle width.");
         float *widthReceivedPtr = (float*)p_evt_write->data;
         float widthReceived = *widthReceivedPtr;
-        saved_parameters_SaveVehicleWidth(widthReceived);
+        mVehicleWidthValueReceivedHandler(widthReceived);
     }
 
     if (p_evt_write->handle == p_accelerometer_service->accelerometer_vehicle_leveling_mode_handles.value_handle)
@@ -1023,7 +1021,8 @@ static void on_write(ble_accelerometer_service_t * p_accelerometer_service, ble_
         NRF_LOG_INFO("Message Received from leveling mode.");
         float *widthReceivedPtr = (float*)p_evt_write->data;
         uint8_t levelingMode = *p_evt_write->data;
-        saved_parameters_SaveCurrentLevelingMode(levelingMode);
+
+        mLevelingModeReceivedHandler(levelingMode);
     }
 };
 
@@ -1125,26 +1124,21 @@ uint32_t ble_accelerometer_service_angles_update(ble_accelerometer_service_t * p
     return err_code;
 }
 
-uint32_t ble_accelerometer_service_orientation_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
+uint32_t ble_accelerometer_service_orientation_update(uint8_t orientation)
 {
-    if (p_accelerometer_service == NULL)
-    {
-        return NRF_ERROR_NULL;
-    }
-
     uint32_t err_code = NRF_SUCCESS;
     ble_gatts_value_t gatts_value;
 
     // Initialize value struct.
     memset(&gatts_value, 0, sizeof(gatts_value));
 
-    gatts_value.len     = custom_value_length*sizeof(uint8_t);
+    gatts_value.len     = sizeof(uint8_t);
     gatts_value.offset  = 0;
-    gatts_value.p_value = custom_value;
+    gatts_value.p_value = &orientation;
 
     // Update database.
-    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
-                                        p_accelerometer_service->accelerometer_orientation_handles.value_handle,
+    err_code= sd_ble_gatts_value_set(m_accelerometer_service.conn_handle,
+                                        m_accelerometer_service.accelerometer_orientation_handles.value_handle,
                                         &gatts_value);
     if (err_code != NRF_SUCCESS)
     {
@@ -1152,19 +1146,19 @@ uint32_t ble_accelerometer_service_orientation_update(ble_accelerometer_service_
     }
 
     // Send value if connected and notifying.
-    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    if ((m_accelerometer_service.conn_handle != BLE_CONN_HANDLE_INVALID)) 
     {
         ble_gatts_hvx_params_t hvx_params;
 
         memset(&hvx_params, 0, sizeof(hvx_params));
 
-        hvx_params.handle = p_accelerometer_service->accelerometer_orientation_handles.value_handle;
+        hvx_params.handle = m_accelerometer_service.accelerometer_orientation_handles.value_handle;
         hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
         hvx_params.offset = gatts_value.offset;
         hvx_params.p_len  = &gatts_value.len;
         hvx_params.p_data = gatts_value.p_value;
 
-        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+        err_code = sd_ble_gatts_hvx(m_accelerometer_service.conn_handle, &hvx_params);
     }
     else
     {
@@ -1223,26 +1217,21 @@ uint32_t ble_accelerometer_service_calibration_update(ble_accelerometer_service_
     return err_code;
 }
 
-uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_service_t * p_accelerometer_service, uint8_t *custom_value, uint8_t custom_value_length)
+uint32_t ble_accelerometer_service_saved_hitch_angle_update(float angle)
 {
-    if (p_accelerometer_service == NULL)
-    {
-        return NRF_ERROR_NULL;
-    }
-
     uint32_t err_code = NRF_SUCCESS;
     ble_gatts_value_t gatts_value;
 
     // Initialize value struct.
     memset(&gatts_value, 0, sizeof(gatts_value));
 
-    gatts_value.len     = custom_value_length*sizeof(uint8_t);
+    gatts_value.len     = sizeof(float);
     gatts_value.offset  = 0;
-    gatts_value.p_value = custom_value;
+    gatts_value.p_value = (uint8_t*)&angle;
 
     // Update database.
-    err_code= sd_ble_gatts_value_set(p_accelerometer_service->conn_handle,
-                                        p_accelerometer_service->accelerometer_saved_hitch_angle_handles.value_handle,
+    err_code= sd_ble_gatts_value_set(m_accelerometer_service.conn_handle,
+                                        m_accelerometer_service.accelerometer_saved_hitch_angle_handles.value_handle,
                                         &gatts_value);
     if (err_code != NRF_SUCCESS)
     {
@@ -1250,19 +1239,19 @@ uint32_t ble_accelerometer_service_saved_hitch_angle_update(ble_accelerometer_se
     }
 
     // Send value if connected and notifying.
-    if ((p_accelerometer_service->conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    if ((m_accelerometer_service.conn_handle != BLE_CONN_HANDLE_INVALID)) 
     {
         ble_gatts_hvx_params_t hvx_params;
 
         memset(&hvx_params, 0, sizeof(hvx_params));
 
-        hvx_params.handle = p_accelerometer_service->accelerometer_saved_hitch_angle_handles.value_handle;
+        hvx_params.handle = m_accelerometer_service.accelerometer_saved_hitch_angle_handles.value_handle;
         hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
         hvx_params.offset = gatts_value.offset;
         hvx_params.p_len  = &gatts_value.len;
         hvx_params.p_data = gatts_value.p_value;
 
-        err_code = sd_ble_gatts_hvx(p_accelerometer_service->conn_handle, &hvx_params);
+        err_code = sd_ble_gatts_hvx(m_accelerometer_service.conn_handle, &hvx_params);
     }
     else
     {
@@ -1504,6 +1493,95 @@ uint32_t ble_accelerometer_service_width_axis_adjustment_update(float widthAxisA
     return err_code;
 }
 
+uint32_t ble_accelerometer_service_saved_vehicle_length_update(float length)
+{
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(float);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&length;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(m_accelerometer_service.conn_handle,
+                                        m_accelerometer_service.accelerometer_saved_vehicle_length_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((m_accelerometer_service.conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = m_accelerometer_service.accelerometer_saved_vehicle_length_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(m_accelerometer_service.conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
+
+uint32_t ble_accelerometer_service_saved_vehicle_width_update(float width)
+{
+    uint32_t err_code = NRF_SUCCESS;
+    ble_gatts_value_t gatts_value;
+
+    // Initialize value struct.
+    memset(&gatts_value, 0, sizeof(gatts_value));
+
+    gatts_value.len     = sizeof(float);
+    gatts_value.offset  = 0;
+    gatts_value.p_value = (uint8_t*)&width;
+
+    // Update database.
+    err_code= sd_ble_gatts_value_set(m_accelerometer_service.conn_handle,
+                                        m_accelerometer_service.accelerometer_saved_vehicle_width_handles.value_handle,
+                                        &gatts_value);
+    if (err_code != NRF_SUCCESS)
+    {
+        return err_code;
+    }
+
+    // Send value if connected and notifying.
+    if ((m_accelerometer_service.conn_handle != BLE_CONN_HANDLE_INVALID)) 
+    {
+        ble_gatts_hvx_params_t hvx_params;
+
+        memset(&hvx_params, 0, sizeof(hvx_params));
+
+        hvx_params.handle = m_accelerometer_service.accelerometer_saved_vehicle_width_handles.value_handle;
+        hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+        hvx_params.offset = gatts_value.offset;
+        hvx_params.p_len  = &gatts_value.len;
+        hvx_params.p_data = gatts_value.p_value;
+
+        err_code = sd_ble_gatts_hvx(m_accelerometer_service.conn_handle, &hvx_params);
+    }
+    else
+    {
+        err_code = NRF_ERROR_INVALID_STATE;
+    }
+
+    return err_code;
+}
+
 /**@brief Function for handling the Accelerometer Service Service events.
  *
  * @details This function will be called for all Accelerometer Service events which are passed to
@@ -1548,40 +1626,27 @@ uint32_t ble_accelerometer_service_angles_set(float *angles)
 
 void ble_accelerometer_service_set_calibration_value_received_callback(void (*func)(uint8_t value))
 {
-    mCalibrationValueReceivedCallback = func;
+    mCalibrationValueReceivedHandler = func;
 }
 
-void calculateAnglesFromDeviceOrientation(float angleX, float angleY, float angleZ, float *angles) {
-    switch (saved_parameters_getSavedOrientation()) {
-        case 1:
-            angles[0] = _RAD_TO_DEG * (atan2(angleZ, -angleY) + _PI);
-            angles[1] = _RAD_TO_DEG * (atan2(-angleX, -angleZ) + _PI);
-            angles[2] = _RAD_TO_DEG * (atan2(-angleZ, -angleX) + _PI);
-            break;
-        case 2:
-            angles[0] = _RAD_TO_DEG * (atan2(-angleY, -angleZ) + _PI);
-            angles[1] = _RAD_TO_DEG * (atan2(-angleX, angleY) + _PI);
-            angles[2] = _RAD_TO_DEG * (atan2(-angleY, -angleX) + _PI);
-            break;
-        case 3:
-            angles[0] = _RAD_TO_DEG * (atan2(-angleY, -angleX) + _PI);
-            angles[1] = _RAD_TO_DEG * (atan2(angleZ, angleY) + _PI);
-            angles[2] = _RAD_TO_DEG * (atan2(-angleY, angleZ) + _PI);
-            break;
-        case 4:
-            angles[0] = _RAD_TO_DEG * (atan2(-angleY, angleX) + _PI);
-            angles[1] = _RAD_TO_DEG * (atan2(-angleZ, angleY) + _PI);
-            angles[2] = _RAD_TO_DEG * (atan2(-angleY, -angleZ) + _PI);
-            break;
-        case 5:
-            angles[0] = _RAD_TO_DEG * (atan2(-angleY, angleZ) + _PI);
-            angles[1] = _RAD_TO_DEG * (atan2(angleX, angleY) + _PI);
-            angles[2] = _RAD_TO_DEG * (atan2(-angleY, angleX) + _PI);
-            break;
-        case 6:
-            angles[0] = _RAD_TO_DEG * (atan2(-angleZ, angleY) + _PI);
-            angles[1] = _RAD_TO_DEG * (atan2(-angleX, angleZ) + _PI);
-            angles[2] = _RAD_TO_DEG * (atan2(-angleZ, -angleX) + _PI);
-            break;
-    }
+void ble_accelerometer_service_set_orientation_received_handler(void (*func)(uint16_t orientation ))
+{
+    mOrientationValueReceivedHandler = func;
 }
+
+void ble_accelerometer_service_set_vehicle_length_received_handler(void (*func)(uint16_t length ))
+{
+    mVehicleLengthValueReceivedHandler = func;
+}
+
+void ble_accelerometer_service_set_vehicle_width_received_handler(void (*func)(uint16_t width ))
+{
+    mVehicleWidthValueReceivedHandler = func;
+}
+
+void ble_accelerometer_service_set_leveling_mode_received_handler(void (*func)(uint16_t levelingMode ))
+{
+    mLevelingModeReceivedHandler = func;
+}
+
+
