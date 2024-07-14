@@ -384,8 +384,17 @@ int main(void)
         NRF_LOG_FLUSH();
     }
 
+        // Set ADXL355 to be in I2C mode
+    nrf_gpio_cfg_output(40);
+    nrf_gpio_pin_clear(40);
+
+    //// Set ADXL355 to have address 0x1D    
+    nrf_gpio_cfg_output(7);
+    nrf_gpio_pin_clear(7);
+
     angle_sensor.init(&m_twi);
     angle_sensor.set_orientation(saved_parameters_getSavedOrientation());
+    //angle_sensor.wakeup();
 
     NRF_LOG_FLUSH();
 

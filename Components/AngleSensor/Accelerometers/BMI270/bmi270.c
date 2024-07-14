@@ -486,7 +486,7 @@ bool bmi270_register_read(BMI270 *sensor, uint8_t register_address, uint8_t * de
     
     // Send the Register address where we want to write the data
     err_code = nrfx_twi_tx(sensor->mHandle, BMI270_ADDRESS, &register_address, 1, true);
-    APP_ERROR_CHECK(err_code);
+    //APP_ERROR_CHECK(err_code);
     //Wait for the transmission to get completed
     //while (sensor->mTransferDone == false){}
     while(nrfx_twi_is_busy(sensor->mHandle)){}
