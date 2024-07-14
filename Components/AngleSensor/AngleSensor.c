@@ -76,9 +76,9 @@ static void read_angle_sensor_timer_timeout_handler()
         static int16_t AccValue[3];
         if(mpu6050_ReadAcc(&mpu6050Sensor, &AccValue[0], &AccValue[1], &AccValue[2]) == true) // Read acc value from mpu6050 internal registers and save them in the array
         {
-            xoutput = (0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
-            youtput = (0.9396f * youtput + 0.0604 * (float)AccValue[1]);
-            zoutput = (0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
+            xoutput = (int32_t)(0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
+            youtput = (int32_t)(0.9396f * youtput + 0.0604 * (float)AccValue[1]);
+            zoutput = (int32_t)(0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
 
             xGs = map((uint32_t)xoutput, -32768, 32767, -90, 90);
             yGs = map((uint32_t)youtput, -32768, 32767, -90, 90);
@@ -115,9 +115,9 @@ static void read_angle_sensor_timer_timeout_handler()
             //NRF_LOG_RAW_INFO("Temperature: " NRF_LOG_FLOAT_MARKER "\r\n", NRF_LOG_FLOAT(temp));
             //NRF_LOG_FLUSH();
 
-            xoutput = (0.9396f * xoutput + 0.0604 * (float)AccValue[0]);
-            youtput = (0.9396f * youtput + 0.0604 * (float)AccValue[1]);
-            zoutput = (0.9396f * zoutput + 0.0604 * (float)AccValue[2]);
+            xoutput = (int32_t)(0.9396f * (float)xoutput + 0.0604 * (float)AccValue[0]);
+            youtput = (int32_t)(0.9396f * (float)youtput + 0.0604 * (float)AccValue[1]);
+            zoutput = (int32_t)(0.9396f * (float)zoutput + 0.0604 * (float)AccValue[2]);
 
             xGs = map(xoutput, -524286, 524286, -90, 90);
             yGs = map(youtput, -524286, 524286, -90, 90);
@@ -163,13 +163,7 @@ ret_code_t angle_sensor_init(const nrfx_twi_t *m_twi)
     NRF_LOG_INFO("Initialising angleSensor");
     // Try to find an accelerometer sensor on the TWI bus
 
-    // Set ADXL355 to be in I2C mode
-    nrf_gpio_cfg_output(40);
-    nrf_gpio_pin_clear(40);
 
-    // Set ADXL355 to have address 0x1D    
-    nrf_gpio_cfg_output(7);
-    nrf_gpio_pin_clear(7);
 
     if (adxl355_init(&adxl355Sensor, m_twi))
     {
